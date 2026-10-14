@@ -1,5 +1,12 @@
 # Kiln Employee Manager changelog
 
+## 1.6.6
+
+- Uses Home Assistant's current target format when reading the legacy vacation
+  calendar.
+- Retries the calendar check after startup when `calendar.get_events` has not
+  registered yet, avoiding a permanent “Vacation Check Unavailable” state.
+
 ## 1.6.5
 
 - Reverted automatic migration when the legacy calendar is absent; this avoids

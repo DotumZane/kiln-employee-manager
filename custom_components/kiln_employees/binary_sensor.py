@@ -6,7 +6,7 @@ from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
@@ -173,6 +173,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             return
         if refresh_running:
             return
+        if not hass.services.has_service("calendar", "get_events"):
+            # Calendar integrations can register their actions after this
+            # integration is set up during Home Assistant startup. Keep the
+            # check fail-closed, but let the scheduled retry recover without
+            # requiring a restart.
+            manager["vacation_ok"] = False
+            _LOGGER.debug("Calendar get_events action is not registered yet; retrying")
+            sync_employees()
+            return
         refresh_running = True
         local_now = dt_util.as_local(dt_util.utcnow())
         start = datetime.combine(local_now.date() - timedelta(days=1), time.min, tzinfo=local_now.tzinfo)
@@ -182,9 +191,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             # calendar entity's on/off state is insufficient for multiple employees.
             response = await hass.services.async_call(
                 "calendar", "get_events",
-                {"entity_id": CALENDAR,
-                 "start_date_time": start.isoformat(),
+                {"start_date_time": start.isoformat(),
                  "end_date_time": end.isoformat()},
+                target={"entity_id": [CALENDAR]},
                 blocking=True, return_response=True,
             )
             payload = response.get(CALENDAR, {}) if isinstance(response, dict) else {}
@@ -223,6 +232,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     manager["listeners"].add(on_employee_change)
     cancel_interval = async_track_time_interval(hass, tick, timedelta(minutes=1))
     entry.async_on_unload(cancel_interval)
+    # Retry shortly after startup in case the calendar integration registers
+    # its action after this integration's first setup pass.
+    entry.async_on_unload(
+        async_call_later(
+            hass, 10,
+            lambda _now: hass.async_create_task(refresh_calendar()),
+        )
+    )
     entry.async_on_unload(lambda: manager["listeners"].discard(on_employee_change))
     hass.async_create_task(refresh_calendar())
     hass.async_create_task(sync_employee_selector())
