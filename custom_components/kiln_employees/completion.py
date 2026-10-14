@@ -46,8 +46,11 @@ async def async_setup_completion(
         await manager["store"].async_save(data)
 
     async def emit(completion_id: str, completed_at: datetime | None) -> None:
-        title = "Kiln #3 Drying Charge Complete"
-        message = "Kiln #3 has completed its drying schedule."
+        title = "Kiln #3 Stopped"
+        message = (
+            "Kiln #3 has stopped. Check whether the drying schedule completed "
+            "or the kiln was manually stopped."
+        )
         attempted = []
         local_now = dt_util.as_local(dt_util.utcnow())
         for employee in list(data.get("employees", [])):

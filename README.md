@@ -15,7 +15,7 @@ reloaded through the Home Assistant integration reload control.
 
 ## Current version
 
-The current release is **1.6.1**. See
+The current release is **1.6.2**. See
 [`custom_components/kiln_employees/CHANGELOG.md`](custom_components/kiln_employees/CHANGELOG.md)
 for release notes.
 
@@ -26,4 +26,4 @@ publish a new changing value to `sensor.kiln_3_completion_event` for each
 completed charge. The value is used only as an internal deduplication token and
 is not included in the employee notification. The integration sends:
 
-> Kiln #3 has completed its drying schedule.
+> Kiln #3 has stopped. Check whether the drying schedule completed or the kiln was manually stopped.

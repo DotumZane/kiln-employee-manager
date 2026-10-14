@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.6.2
+
+- Changed the Kiln #3 event notification to clearly indicate that the kiln
+  stopped and that completion versus manual stop still requires checking.
+
 ## 1.6.1
 
 - Removed the charge ID from the employee-facing completion notification.
