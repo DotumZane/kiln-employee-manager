@@ -234,7 +234,7 @@ async def ws_test_notification(hass, connection, msg):
     try:
         result = await send_mobile(hass, employee,
             "Kiln Employees - Test Notification",
-            "This is a test from Kiln Employee Manager. No kiln completion has been detected.")
+            "This is a test from Kiln Employee Manager. It does not represent a kiln completion.")
     except ValueError as exc:
         connection.send_error(msg["id"], "invalid_target", str(exc))
         return

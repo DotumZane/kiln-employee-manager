@@ -17,6 +17,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .plc_alerts import async_setup_alerts
+from .completion import async_setup_completion
 from homeassistant.const import Platform
 
 PLATFORM_LIST = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
@@ -64,6 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # resolve the currently loaded manager at call time.
     panel_api.register(hass)
     await async_setup_alerts(hass, entry, hass.data[DOMAIN][entry.entry_id])
+    await async_setup_completion(hass, entry, hass.data[DOMAIN][entry.entry_id])
     # Static paths are also process-global and have no supported removal API.
     # Register once so an integration reload does not attempt to register a
     # duplicate path.

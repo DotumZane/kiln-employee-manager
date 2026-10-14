@@ -1,5 +1,12 @@
 # Kiln Employee Manager changelog
 
+## 1.6.0
+
+- Added Node-RED-driven Kiln #3 completion notifications.
+- Uses `sensor.kiln_3_completion_id` as a unique per-charge identifier.
+- Persists processed completion IDs to prevent duplicate notifications after restarts.
+- Notifies only eligible employees assigned to Kiln #3.
+
 ## 1.5.0
 
 - Added shared constants in `const.py` to remove the `__init__.py` import coupling.

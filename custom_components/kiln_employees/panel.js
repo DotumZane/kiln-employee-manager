@@ -1,4 +1,4 @@
-// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.5).
+// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.6).
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 class KilnEmployeesPanel extends HTMLElement {
@@ -240,7 +240,7 @@ class KilnEmployeesPanel extends HTMLElement {
     add.onclick = () => { this.current = null; this.mode = 'edit'; this.notice = ''; this.render(); };
     top.append(add);
     shell.append(top);
-    shell.append(this.el('p', { class: 'muted', text: `${this.data.length} of 10 employees. Status follows the saved work schedule, not physical attendance. Completion alerts are not enabled yet; PLC communication alerts are managed under Manage Alerts.` }));
+    shell.append(this.el('p', { class: 'muted', text: `${this.data.length} of 10 employees. Status follows the saved work schedule, not physical attendance. Kiln completion notifications are driven by the Node-RED completion ID; PLC communication alerts are managed under Manage Alerts.` }));
     if (!this.data.length) shell.append(this.el('div', { class: 'card', text: 'No employees added yet.' }));
     for (const employee of this.data) {
       const card = this.el('div', { class: 'card employee' });
@@ -519,7 +519,7 @@ class KilnEmployeesPanel extends HTMLElement {
 
   renderManageAlerts(shell) {
     shell.append(this.el('h2', { text: 'Manage Alerts' }));
-    shell.append(this.el('div', { class: 'note', text: 'These delays apply globally, not per employee. Only Kiln #3 PLC communication is connected today. No kiln-completion or future equipment-alarm delivery is enabled.' }));
+    shell.append(this.el('div', { class: 'note', text: 'These delays apply globally, not per employee. Kiln #3 completion notifications use the Node-RED completion ID. Future equipment-alarm delivery is not enabled.' }));
     const form = this.el('form', { class: 'card' });
     shell.append(form);
     form.append(this.el('h3', { text: 'Global PLC Communication Delays' }));

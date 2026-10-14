@@ -10,7 +10,8 @@ STORAGE_KEY = "kiln_employee_manager"
 
 PANEL_URL_PATH = "kiln-employees"
 PANEL_STATIC_URL = "/kiln-employees-static/panel.js"
-PANEL_CACHE_VERSION = 15
+PANEL_CACHE_VERSION = 16
+COMPLETION_ENTITY = "sensor.kiln_3_completion_id"
 WS_REGISTERED_KEY = f"{DOMAIN}_websocket_registered"
 STATIC_REGISTERED_KEY = f"{DOMAIN}_static_registered"
 
