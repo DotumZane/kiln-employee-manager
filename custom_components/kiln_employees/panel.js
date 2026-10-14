@@ -32,11 +32,12 @@ class KilnEmployeesPanel extends HTMLElement {
   connectedCallback() {
     if (this._refreshTimer !== null) return;
     this._refreshTimer = window.setInterval(() => {
-      // Never overwrite partially edited employee or time-off forms.
-      if (this.loaded && !this.busy && this.mode === 'list' && this.tab === 'employees') {
+      // Never overwrite partially edited employee or time-off forms. PLC data
+      // is intentionally refreshed frequently while its read-only tab is open.
+      if (this.loaded && !this.busy && this.mode === 'list' && this.tab === 'plc') {
         this.load();
       }
-    }, 60000);
+    }, 2000);
   }
 
   disconnectedCallback() {
@@ -266,7 +267,13 @@ class KilnEmployeesPanel extends HTMLElement {
     for (const [id, label] of [['employees', 'Employees'], ['timeoff', 'Time Off'], ['alerts', 'Manage Alerts'], ['entities', 'Entities'], ['plc', 'PLC Data'], ['history', 'Notification History']]) {
       const button = this.el('button', { text: label, class: this.tab === id ? 'active' : '' });
       button.type = 'button';
-      button.onclick = () => { this.tab = id; this.notice = ''; this.error = ''; this.render(); };
+      button.onclick = () => {
+        this.tab = id;
+        this.notice = '';
+        this.error = '';
+        this.render();
+        if (id === 'plc') this.load();
+      };
       bar.append(button);
     }
     shell.append(bar);
@@ -774,7 +781,7 @@ class KilnEmployeesPanel extends HTMLElement {
 
   renderPlcData(shell) {
     shell.append(this.el('h2', { text: 'Kiln #3 PLC Data' }));
-    shell.append(this.el('p', { class: 'muted', text: 'Read-only diagnostic data received from Node-RED over MQTT. These values are not editable here.' }));
+    shell.append(this.el('p', { class: 'muted', text: 'Read-only diagnostic data received from Node-RED over MQTT. This page refreshes every 2 seconds while open. These values are not editable here.' }));
     const data = this.plcData || {};
     const card = this.el('div', { class: 'card' });
     const grid = this.el('div', { class: 'grid' });

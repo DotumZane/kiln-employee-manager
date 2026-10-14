@@ -1,5 +1,9 @@
 # Kiln Employee Manager changelog
 
+## 1.12.1
+
+- PLC Data now refreshes automatically every 2 seconds while the tab is open.
+
 ## 1.12.0
 
 - Added a read-only PLC Data tab showing the latest raw Kiln #3 tags, PLC
