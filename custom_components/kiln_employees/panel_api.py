@@ -5,7 +5,13 @@ import re
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
-from .const import DEFAULT_ENTITIES, DOMAIN, ENTITY_LABELS, WS_REGISTERED_KEY
+from .const import (
+    DEFAULT_ENTITIES,
+    DOMAIN,
+    ENTITY_LABELS,
+    KILN_3_RAW_MQTT_TOPIC,
+    WS_REGISTERED_KEY,
+)
 from .config_flow import validate_employee, DAYS
 from .notifications import send_mobile
 from .time_off import REASONS, validate_range, convert_legacy_event
@@ -78,6 +84,21 @@ def _employee_display_status(manager: dict, employee: dict, local_now) -> dict:
     }
 
 
+def _plc_data(manager: dict) -> dict:
+    """Return read-only raw PLC diagnostics for the admin panel."""
+    monitor = manager.get("kiln_monitor", {})
+    raw = monitor.get("raw", {})
+    return {
+        "topic": KILN_3_RAW_MQTT_TOPIC,
+        "raw": raw if isinstance(raw, dict) else {},
+        "last_received": monitor.get("last_received"),
+        "last_clock_received": monitor.get("last_clock_received"),
+        "last_clock": monitor.get("last_clock"),
+        "last_status": monitor.get("last_status", "Unknown"),
+        "data_valid": monitor.get("data_valid", False),
+    }
+
+
 @websocket_api.websocket_command({vol.Required("type"): "kiln_employees/list"})
 @websocket_api.require_admin
 @callback
@@ -117,6 +138,7 @@ def ws_list(hass, connection, msg):
             for item in mgr["data"].get("additional_entities", [])
             if isinstance(item, dict) and item.get("entity_id") and item.get("name")
         ],
+        "plc_data": _plc_data(mgr),
     })
 
 

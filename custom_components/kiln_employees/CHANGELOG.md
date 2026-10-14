@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.12.0
+
+- Added a read-only PLC Data tab showing the latest raw Kiln #3 tags, PLC
+  clock, MQTT topic, data validity, and update timestamps.
+
 ## 1.11.3
 
 - Fixed MQTT monitor startup so it waits for the MQTT client without treating

@@ -12,6 +12,7 @@ from datetime import timedelta
 from homeassistant.components import mqtt
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.util import dt as dt_util
 
 from .const import (
     KILN_3_COMMUNICATION_MQTT_TOPIC,
@@ -83,6 +84,10 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
         "last_clock_change": None,
         "values": None,
         "data_valid": False,
+        "raw": {},
+        "last_received": None,
+        "last_clock_received": None,
+        "last_status": "Unknown",
         "last_published_connected": None,
     }
 
@@ -112,6 +117,7 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
             return
 
         status, running, paused, stopped = _status(values)
+        state["last_status"] = status
         data = {
             "status": status,
             "dataFresh": True,
@@ -143,11 +149,14 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
             return
         if not isinstance(raw, dict):
             return
+        state["raw"] = raw
+        state["last_received"] = dt_util.utcnow().isoformat()
         incoming = _normalize(raw)
         clock = incoming.get(_CLOCK)
         if type(clock) is int and clock != state["last_clock"]:
             state["last_clock"] = clock
             state["last_clock_change"] = hass.loop.time()
+            state["last_clock_received"] = dt_util.utcnow().isoformat()
         values = _validated(incoming)
         if values is not None:
             state["values"] = values

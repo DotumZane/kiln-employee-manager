@@ -14,6 +14,7 @@ class KilnEmployeesPanel extends HTMLElement {
     this.timeOffMigrated = false;
     this.entities = {};
     this.additionalEntities = [];
+    this.plcData = {};
     this.entityRows = [];
     this.timeOffSelected = '';
     this.editTimeOff = null;
@@ -73,6 +74,7 @@ class KilnEmployeesPanel extends HTMLElement {
       this.timeOffMigrated = Boolean(response.time_off_migrated);
       this.entities = response.entities || {};
       this.additionalEntities = response.additional_entities || [];
+      this.plcData = response.plc_data || {};
       if (!this.data.some(employee => employee.id === this.timeOffSelected)) {
         this.timeOffSelected = this.data[0]?.id || '';
       }
@@ -249,6 +251,7 @@ class KilnEmployeesPanel extends HTMLElement {
     else if (this.tab === 'entities') this.renderEntities(shell);
     else if (this.tab === 'timeoff') this.renderTimeOff(shell);
     else if (this.tab === 'history') this.renderHistory(shell);
+    else if (this.tab === 'plc') this.renderPlcData(shell);
     else this.renderEmployees(shell);
   }
 
@@ -260,7 +263,7 @@ class KilnEmployeesPanel extends HTMLElement {
     top.append(refresh);
     shell.append(top);
     const bar = this.el('nav', { class: 'tabs' });
-    for (const [id, label] of [['employees', 'Employees'], ['timeoff', 'Time Off'], ['alerts', 'Manage Alerts'], ['entities', 'Entities'], ['history', 'Notification History']]) {
+    for (const [id, label] of [['employees', 'Employees'], ['timeoff', 'Time Off'], ['alerts', 'Manage Alerts'], ['entities', 'Entities'], ['plc', 'PLC Data'], ['history', 'Notification History']]) {
       const button = this.el('button', { text: label, class: this.tab === id ? 'active' : '' });
       button.type = 'button';
       button.onclick = () => { this.tab = id; this.notice = ''; this.error = ''; this.render(); };
@@ -767,6 +770,50 @@ class KilnEmployeesPanel extends HTMLElement {
       card.append(row);
       if (index < items.length - 1) card.append(this.el('hr'));
     });
+  }
+
+  renderPlcData(shell) {
+    shell.append(this.el('h2', { text: 'Kiln #3 PLC Data' }));
+    shell.append(this.el('p', { class: 'muted', text: 'Read-only diagnostic data received from Node-RED over MQTT. These values are not editable here.' }));
+    const data = this.plcData || {};
+    const card = this.el('div', { class: 'card' });
+    const grid = this.el('div', { class: 'grid' });
+    const fields = [
+      ['MQTT topic', data.topic || 'Unknown'],
+      ['Interpreted status', data.last_status || 'Unknown'],
+      ['PLC clock', data.last_clock ?? 'Unknown'],
+      ['Data valid', data.data_valid ? 'Yes' : 'No'],
+      ['Last raw message', KilnEmployeesPanel.formatTimestamp(data.last_received)],
+      ['Last clock change', KilnEmployeesPanel.formatTimestamp(data.last_clock_received)],
+    ];
+    fields.forEach(([label, value]) => {
+      const item = this.el('div');
+      item.append(this.el('div', { class: 'muted', text: label }));
+      item.append(this.el('div', { text: String(value) }));
+      grid.append(item);
+    });
+    card.append(grid);
+    shell.append(card);
+
+    const rawCard = this.el('div', { class: 'card' });
+    rawCard.append(this.el('h3', { text: 'Raw PLC Tags' }));
+    const table = this.el('table', { class: 'recipients' });
+    const header = this.el('tr');
+    header.append(this.el('th', { text: 'Tag' }), this.el('th', { text: 'Value' }));
+    table.append(header);
+    const raw = data.raw && typeof data.raw === 'object' ? data.raw : {};
+    const entries = Object.entries(raw).sort(([a], [b]) => a.localeCompare(b));
+    if (!entries.length) {
+      rawCard.append(this.el('p', { class: 'muted', text: 'No raw PLC data has been received yet.' }));
+    } else {
+      entries.forEach(([key, value]) => {
+        const row = this.el('tr');
+        row.append(this.el('td', { text: key }), this.el('td', { text: value === null ? 'null' : String(value) }));
+        table.append(row);
+      });
+      rawCard.append(table);
+    }
+    shell.append(rawCard);
   }
 
   renderEditor(shell) {
