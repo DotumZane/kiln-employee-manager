@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.11.3
+
+- Fixed MQTT monitor startup so it waits for the MQTT client without treating
+  the readiness helper's return value as a disable flag.
+
 ## 1.11.2
 
 - Treats raw MQTT payloads with missing or invalid PLC operating tags as

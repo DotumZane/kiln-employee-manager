@@ -74,9 +74,9 @@ def _status(values: dict) -> tuple[str, bool, bool, bool]:
 
 async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None:
     """Subscribe to raw PLC data and publish the existing derived MQTT topics."""
-    if not await mqtt.async_wait_for_mqtt_client(hass):
-        _LOGGER.warning("MQTT is unavailable; Kiln #3 raw monitoring is disabled")
-        return
+    # Wait for the MQTT client before subscribing.  This helper establishes
+    # readiness; it does not need to be treated as a boolean feature flag.
+    await mqtt.async_wait_for_mqtt_client(hass)
 
     state = manager["kiln_monitor"] = {
         "last_clock": None,
