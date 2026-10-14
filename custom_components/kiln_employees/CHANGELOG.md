@@ -1,5 +1,11 @@
 # Kiln Employee Manager changelog
 
+## 1.13.0
+
+- Added a Kilns section with subpages for Kilns 1, 2, 3, and Raw PLC Data.
+- Moved raw PLC diagnostics under the Kilns section to keep navigation ready
+  for additional kiln configuration pages.
+
 ## 1.12.1
 
 - PLC Data now refreshes automatically every 2 seconds while the tab is open.

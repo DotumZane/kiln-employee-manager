@@ -22,6 +22,7 @@ class KilnEmployeesPanel extends HTMLElement {
     this.current = null;
     this.mode = 'list';
     this.tab = 'employees';
+    this.kilnTab = 'overview';
     this.busy = false;
     this.loaded = false;
     this.error = '';
@@ -34,7 +35,8 @@ class KilnEmployeesPanel extends HTMLElement {
     this._refreshTimer = window.setInterval(() => {
       // Never overwrite partially edited employee or time-off forms. PLC data
       // is intentionally refreshed frequently while its read-only tab is open.
-      if (this.loaded && !this.busy && this.mode === 'list' && this.tab === 'plc') {
+      if (this.loaded && !this.busy && this.mode === 'list' &&
+          this.tab === 'kilns' && ['3', 'plc'].includes(this.kilnTab)) {
         this.load();
       }
     }, 2000);
@@ -252,7 +254,7 @@ class KilnEmployeesPanel extends HTMLElement {
     else if (this.tab === 'entities') this.renderEntities(shell);
     else if (this.tab === 'timeoff') this.renderTimeOff(shell);
     else if (this.tab === 'history') this.renderHistory(shell);
-    else if (this.tab === 'plc') this.renderPlcData(shell);
+    else if (this.tab === 'kilns') this.renderKilns(shell);
     else this.renderEmployees(shell);
   }
 
@@ -264,7 +266,7 @@ class KilnEmployeesPanel extends HTMLElement {
     top.append(refresh);
     shell.append(top);
     const bar = this.el('nav', { class: 'tabs' });
-    for (const [id, label] of [['employees', 'Employees'], ['timeoff', 'Time Off'], ['alerts', 'Manage Alerts'], ['entities', 'Entities'], ['plc', 'PLC Data'], ['history', 'Notification History']]) {
+    for (const [id, label] of [['employees', 'Employees'], ['timeoff', 'Time Off'], ['alerts', 'Manage Alerts'], ['kilns', 'Kilns'], ['entities', 'Entities'], ['history', 'Notification History']]) {
       const button = this.el('button', { text: label, class: this.tab === id ? 'active' : '' });
       button.type = 'button';
       button.onclick = () => {
@@ -272,7 +274,7 @@ class KilnEmployeesPanel extends HTMLElement {
         this.notice = '';
         this.error = '';
         this.render();
-        if (id === 'plc') this.load();
+        if (id === 'kilns' && ['3', 'plc'].includes(this.kilnTab)) this.load();
       };
       bar.append(button);
     }
@@ -777,6 +779,66 @@ class KilnEmployeesPanel extends HTMLElement {
       card.append(row);
       if (index < items.length - 1) card.append(this.el('hr'));
     });
+  }
+
+  renderKilns(shell) {
+    shell.append(this.el('h2', { text: 'Kilns' }));
+    shell.append(this.el('p', { class: 'muted', text: 'Kiln-specific status, entity mappings, alarms, and operating configuration.' }));
+    const nav = this.el('div', { class: 'actions' });
+    for (const [id, label] of [['overview', 'All Kilns'], ['1', 'Kiln 1'], ['2', 'Kiln 2'], ['3', 'Kiln 3'], ['plc', 'Raw PLC Data']]) {
+      const button = this.el('button', { text: label, class: this.kilnTab === id ? '' : 'secondary' });
+      button.type = 'button';
+      button.onclick = () => {
+        this.kilnTab = id;
+        this.notice = '';
+        this.error = '';
+        this.render();
+        if (['3', 'plc'].includes(id)) this.load();
+      };
+      nav.append(button);
+    }
+    shell.append(nav);
+
+    if (this.kilnTab === 'plc') {
+      this.renderPlcData(shell);
+      return;
+    }
+    if (this.kilnTab === 'overview') {
+      const card = this.el('div', { class: 'card' });
+      card.append(this.el('h3', { text: 'Kiln Configuration' }));
+      card.append(this.el('p', { class: 'muted', text: 'Select a kiln to configure its PLC/MQTT signals, notifications, alarms, and future schedule-specific behavior.' }));
+      [['1', 'Kiln 1', 'Configuration will be added when Kiln 1 monitoring is brought into the integration.'],
+       ['2', 'Kiln 2', 'Configuration will be added when Kiln 2 monitoring is brought into the integration.'],
+       ['3', 'Kiln 3', `Live status: ${this.plcData.last_status || 'Unknown'}`]].forEach(([id, name, description]) => {
+        const row = this.el('div', { class: 'employee' });
+        const info = this.el('div', { class: 'employee-info' });
+        info.append(this.el('h3', { text: name }), this.el('div', { class: 'muted', text: description }));
+        const open = this.el('button', { text: 'Open' });
+        open.onclick = () => { this.kilnTab = id; this.render(); if (id === '3') this.load(); };
+        row.append(info, open);
+        card.append(row);
+      });
+      shell.append(card);
+      return;
+    }
+    if (this.kilnTab === '3') {
+      const card = this.el('div', { class: 'card' });
+      card.append(this.el('h3', { text: 'Kiln 3 Configuration' }));
+      card.append(this.el('p', { class: 'muted', text: 'Kiln 3 is currently connected through the raw PLC MQTT monitor. Entity mappings remain available from the Entities page; kiln-specific configuration will be expanded here.' }));
+      const grid = this.el('div', { class: 'grid' });
+      [['Status', this.plcData.last_status || 'Unknown'], ['PLC clock', this.plcData.last_clock ?? 'Unknown'], ['Data valid', this.plcData.data_valid ? 'Yes' : 'No'], ['Raw topic', this.plcData.topic || 'Unknown']].forEach(([label, value]) => {
+        const item = this.el('div');
+        item.append(this.el('div', { class: 'muted', text: label }), this.el('div', { text: String(value) }));
+        grid.append(item);
+      });
+      card.append(grid);
+      shell.append(card);
+      return;
+    }
+    const card = this.el('div', { class: 'card' });
+    card.append(this.el('h3', { text: `Kiln ${this.kilnTab} Configuration` }));
+    card.append(this.el('p', { class: 'muted', text: 'This kiln page is ready for its PLC tag mappings, MQTT signals, alarms, and notification rules.' }));
+    shell.append(card);
   }
 
   renderPlcData(shell) {
