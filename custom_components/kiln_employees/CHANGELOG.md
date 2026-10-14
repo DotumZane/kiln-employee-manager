@@ -1,5 +1,11 @@
 # Kiln Employee Manager changelog
 
+## 1.9.2
+
+- Made Entity Settings read-only by default with an explicit Edit Entities
+  action.
+- Added cancel support and removal controls for additional entities.
+
 ## 1.9.1
 
 - Fixed Home Assistant startup compatibility for dynamic entity listeners.

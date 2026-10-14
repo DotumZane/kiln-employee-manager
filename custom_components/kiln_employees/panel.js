@@ -1,4 +1,4 @@
-// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.8.0).
+// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.9.2).
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 class KilnEmployeesPanel extends HTMLElement {
@@ -15,6 +15,7 @@ class KilnEmployeesPanel extends HTMLElement {
     this.entities = {};
     this.additionalEntities = [];
     this.entityRows = [];
+    this.entitiesEditing = false;
     this.timeOffSelected = '';
     this.editTimeOff = null;
     this.showPastTimeOff = false;
@@ -552,7 +553,36 @@ class KilnEmployeesPanel extends HTMLElement {
 
   renderEntities(shell) {
     shell.append(this.el('h2', { text: 'Entity Settings' }));
-    shell.append(this.el('p', { class: 'muted', text: 'These Home Assistant entities provide the signals used by the integration. Changes take effect without editing code; entity IDs are checked before saving.' }));
+    shell.append(this.el('p', { class: 'muted', text: 'These Home Assistant entities provide the signals used by the integration. Select Edit Entities to make changes.' }));
+    if (!this.entitiesEditing) {
+      const card = this.el('div', { class: 'card' });
+      for (const info of Object.values(this.entities)) {
+        const row = this.el('div', { class: 'entity-row' });
+        row.append(this.el('strong', { text: info.label }));
+        row.append(this.el('div', { class: 'muted', text: info.entity_id }));
+        const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
+        row.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }));
+        card.append(row);
+      }
+      card.append(this.el('h3', { text: 'Additional Entities' }));
+      if (!this.additionalEntities.length) {
+        card.append(this.el('p', { class: 'muted', text: 'No additional entities configured.' }));
+      } else {
+        for (const info of this.additionalEntities) {
+          const row = this.el('div', { class: 'entity-row' });
+          row.append(this.el('strong', { text: info.label }));
+          row.append(this.el('div', { class: 'muted', text: info.entity_id }));
+          const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
+          row.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }));
+          card.append(row);
+        }
+      }
+      shell.append(card);
+      const edit = this.el('button', { text: 'Edit Entities' });
+      edit.onclick = () => { this.entitiesEditing = true; this.notice = ''; this.render(); };
+      shell.append(edit);
+      return;
+    }
     const form = this.el('form', { class: 'card' });
     shell.append(form);
     form.append(this.el('h3', { text: 'Active Integration Entities' }));
@@ -594,6 +624,10 @@ class KilnEmployeesPanel extends HTMLElement {
     const save = this.el('button', { text: 'Save Entity Settings' });
     save.type = 'submit';
     const actions = this.el('div', { class: 'actions' });
+    const cancel = this.el('button', { text: 'Cancel', class: 'secondary' });
+    cancel.type = 'button';
+    cancel.onclick = () => { this.entitiesEditing = false; this.render(); };
+    actions.append(cancel);
     actions.append(save);
     form.append(actions);
     form.onsubmit = async event => {
@@ -606,6 +640,7 @@ class KilnEmployeesPanel extends HTMLElement {
       try {
         await this.call('save_entities', { entities, additional_entities: additionalEntities });
         this.notice = 'Entity settings saved.';
+        this.entitiesEditing = false;
         await this.load();
       } catch (error) {
         this.error = String(error.message || error);
