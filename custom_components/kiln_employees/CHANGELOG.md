@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.9.4
+
+- Bumped the panel cache version so the duplicate-registration fix is loaded
+  immediately by Home Assistant browsers.
+
 ## 1.9.3
 
 - Prevented duplicate frontend custom-element registration.
