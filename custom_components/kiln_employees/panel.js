@@ -137,6 +137,23 @@ class KilnEmployeesPanel extends HTMLElement {
     return number;
   }
 
+  static formatTimestamp(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value || 'Unknown time');
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date);
+  }
+
+  static historyLabel(kind) {
+    return {
+      alert_plc_lost: 'PLC Communication Lost',
+      alert_plc_restored: 'PLC Communication Restored',
+      kiln_completion: 'Kiln #3 Stopped',
+    }[kind] || String(kind || 'Notification');
+  }
+
   render() {
     const shadow = this.shadowRoot;
     shadow.replaceChildren();
@@ -145,6 +162,8 @@ class KilnEmployeesPanel extends HTMLElement {
       :host{display:block;color:var(--primary-text-color);font-family:Arial,sans-serif;background:var(--primary-background-color);min-height:100vh}
       .shell{max-width:1000px;margin:auto;padding:22px}
       .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .section-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:4px}
+      .section-top h2,.section-top h3{margin:0}
       h1{font-size:25px;margin:0 0 16px}h2{font-size:19px;margin:6px 0 12px}h3{font-size:16px;margin:12px 0}
       .card{background:var(--card-background-color,#fff);border:1px solid var(--divider-color,#ccc);padding:18px;border-radius:14px;margin:12px 0}
       .employee{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
@@ -179,6 +198,10 @@ class KilnEmployeesPanel extends HTMLElement {
       .employee-info h2{margin:0}
       .employee-status-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
       .employee-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+      .history-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0}
+      .history-details{display:flex;flex-direction:column;gap:4px;min-width:0}
+      .history-kind{font-weight:700}
+      .history-count{white-space:nowrap;color:var(--secondary-text-color);font-size:13px}
       .date-input{cursor:pointer}
       .date-input.active{border-color:var(--primary-color,#1976d2);outline:2px solid var(--primary-color,#1976d2);outline-offset:1px}
       .calendar-wrap{max-width:480px;width:100%;border:1px solid var(--divider-color);border-radius:14px;padding:16px;background:var(--card-background-color);box-sizing:border-box;margin:12px 0 18px}
@@ -217,7 +240,7 @@ class KilnEmployeesPanel extends HTMLElement {
   }
 
   renderTabs(shell) {
-    const top = this.el('div', { class: 'top' });
+    const top = this.el('div', { class: 'section-top' });
     top.append(this.el('h1', { text: 'Kiln Employee Manager' }));
     const refresh = this.el('button', { text: 'Refresh', class: 'secondary' });
     refresh.onclick = () => { this.notice = ''; this.load(); };
@@ -234,13 +257,13 @@ class KilnEmployeesPanel extends HTMLElement {
   }
 
   renderEmployees(shell) {
-    const top = this.el('div', { class: 'top' });
+    const top = this.el('div', { class: 'section-top' });
     top.append(this.el('h2', { text: 'Employees' }));
     const add = this.el('button', { text: '+ Add Employee' });
     add.onclick = () => { this.current = null; this.mode = 'edit'; this.notice = ''; this.render(); };
     top.append(add);
     shell.append(top);
-    shell.append(this.el('p', { class: 'muted', text: `${this.data.length} of 10 employees. Status follows the saved work schedule, not physical attendance. Kiln completion notifications are driven by the Node-RED completion ID; PLC communication alerts are managed under Manage Alerts.` }));
+    shell.append(this.el('p', { class: 'muted', text: `${this.data.length} of 10 employees. Status follows the saved work schedule, not physical attendance. Kiln #3 stop notifications are driven by the Node-RED completion event; PLC communication alerts are managed under Manage Alerts.` }));
     if (!this.data.length) shell.append(this.el('div', { class: 'card', text: 'No employees added yet.' }));
     for (const employee of this.data) {
       const card = this.el('div', { class: 'card employee' });
@@ -266,7 +289,7 @@ class KilnEmployeesPanel extends HTMLElement {
   }
 
   renderTimeOff(shell) {
-    const top = this.el('div', { class: 'top' });
+    const top = this.el('div', { class: 'section-top' });
     top.append(this.el('h2', { text: 'Employee Time Off' }));
     shell.append(top);
     shell.append(this.el('p', { class: 'muted', text: 'Select an employee and the first and last day off, then save. Both dates are included. Time off automatically blocks PLC alert eligibility.' }));
@@ -341,7 +364,7 @@ class KilnEmployeesPanel extends HTMLElement {
 
     const listCard = this.el('div', { class: 'card' });
     shell.append(listCard);
-    const listTop = this.el('div', { class: 'top' });
+    const listTop = this.el('div', { class: 'section-top' });
     listTop.append(this.el('h3', { text: 'Scheduled Time Off' }));
     const togglePast = this.el('label', { class: 'check' });
     const show = this.el('input', { type: 'checkbox', checked: this.showPastTimeOff });
@@ -519,7 +542,7 @@ class KilnEmployeesPanel extends HTMLElement {
 
   renderManageAlerts(shell) {
     shell.append(this.el('h2', { text: 'Manage Alerts' }));
-    shell.append(this.el('div', { class: 'note', text: 'These delays apply globally, not per employee. Kiln #3 completion notifications use the Node-RED completion ID. Future equipment-alarm delivery is not enabled.' }));
+    shell.append(this.el('div', { class: 'note', text: 'These delays apply globally, not per employee. Kiln #3 stop notifications use the Node-RED completion event. Future equipment-alarm delivery is not enabled.' }));
     const form = this.el('form', { class: 'card' });
     shell.append(form);
     form.append(this.el('h3', { text: 'Global PLC Communication Delays' }));
@@ -535,7 +558,7 @@ class KilnEmployeesPanel extends HTMLElement {
     form.append(this.el('p', { class: 'muted', text: 'Choose which employees receive each alert. Their assigned kiln, shift/24/7, vacation, manual Time Off, and notification-enabled setting are still respected. Only App notifications send currently; SMS is not configured.' }));
     const table = this.el('table', { class: 'recipients' });
     const header = this.el('tr');
-    for (const label of ['Employee', 'Comm Lost', 'Comm Restored']) header.append(this.el('th', { text: label }));
+    for (const label of ['Employee', 'Communication Lost', 'Communication Restored']) header.append(this.el('th', { text: label }));
     table.append(header);
     const recipientRows = [];
     for (const employee of this.data) {
@@ -600,16 +623,22 @@ class KilnEmployeesPanel extends HTMLElement {
     shell.append(this.el('h2', { text: 'Notification History' }));
     shell.append(this.el('p', { class: 'muted', text: 'These entries record notification submissions, not proof that phones displayed a message.' }));
     if (!this.history.length) {
-      shell.append(this.el('div', { class: 'card', text: 'No PLC alert attempts recorded yet.' }));
+      shell.append(this.el('div', { class: 'card', text: 'No notification attempts recorded yet.' }));
       return;
     }
     const card = this.el('div', { class: 'card' });
     shell.append(card);
-    for (const item of [...this.history].reverse()) {
+    const items = [...this.history].reverse();
+    items.forEach((item, index) => {
       const submitted = (item.deliveries || []).filter(delivery => delivery.result === 'submitted').length;
-      card.append(this.el('div', { text: `${item.timestamp} · ${item.kind} · ${submitted} submitted` }));
-      card.append(this.el('hr'));
-    }
+      const row = this.el('div', { class: 'history-row' });
+      const details = this.el('div', { class: 'history-details' });
+      details.append(this.el('div', { class: 'history-kind', text: KilnEmployeesPanel.historyLabel(item.kind) }));
+      details.append(this.el('div', { class: 'muted', text: KilnEmployeesPanel.formatTimestamp(item.timestamp) }));
+      row.append(details, this.el('div', { class: 'history-count', text: `${submitted} submitted` }));
+      card.append(row);
+      if (index < items.length - 1) card.append(this.el('hr'));
+    });
   }
 
   renderEditor(shell) {

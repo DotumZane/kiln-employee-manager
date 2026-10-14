@@ -1,5 +1,13 @@
 # Kiln Employee Manager changelog
 
+## 1.6.3
+
+- Polished section headers and action alignment.
+- Replaced outdated completion-ID wording with completion-event wording.
+- Expanded communication recipient labels for clarity.
+- Formatted notification-history timestamps in the browser's local timezone.
+- Added readable notification-history labels and submission counts.
+
 ## 1.6.2
 
 - Changed the Kiln #3 event notification to clearly indicate that the kiln
