@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.13.1
+
+- Updated the raw PLC data display labels to identify the physical Kiln #3;
+  the underlying PLC tag names remain unchanged for compatibility.
+
 ## 1.13.0
 
 - Added a Kilns section with subpages for Kilns 1, 2, 3, and Raw PLC Data.

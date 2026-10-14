@@ -877,12 +877,25 @@ class KilnEmployeesPanel extends HTMLElement {
     } else {
       entries.forEach(([key, value]) => {
         const row = this.el('tr');
-        row.append(this.el('td', { text: key }), this.el('td', { text: value === null ? 'null' : String(value) }));
+        row.append(this.el('td', { text: KilnEmployeesPanel.displayPlcTag(key) }), this.el('td', { text: value === null ? 'null' : String(value) }));
         table.append(row);
       });
       rawCard.append(table);
     }
     shell.append(rawCard);
+  }
+
+  static displayPlcTag(key) {
+    const labels = {
+      'Kiln1_ON': 'Kiln 3 On',
+      'Kiln1_Pause': 'Kiln 3 Pause',
+      'PLC_ClockValues[5]': 'Kiln 3 PLC Clock',
+      'Program:Kiln1.Kiln_Down': 'Kiln 3 Down',
+      'Program:Kiln1.Normal_Stop': 'Kiln 3 Normal Stop',
+      'Program:Kiln1.Step_Number': 'Kiln 3 Step Number',
+      'Program:Kiln1.Step_Stop': 'Kiln 3 Step Stop',
+    };
+    return labels[key] || key.replaceAll('Kiln1', 'Kiln 3');
   }
 
   renderEditor(shell) {
