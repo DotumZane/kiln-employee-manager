@@ -15,7 +15,6 @@ class KilnEmployeesPanel extends HTMLElement {
     this.entities = {};
     this.additionalEntities = [];
     this.entityRows = [];
-    this.entitiesEditing = false;
     this.timeOffSelected = '';
     this.editTimeOff = null;
     this.showPastTimeOff = false;
@@ -183,6 +182,8 @@ class KilnEmployeesPanel extends HTMLElement {
       .entity-row{border-bottom:1px solid var(--divider-color);padding:4px 0 10px;margin-bottom:8px}
       .entity-status{font-size:13px;margin-top:4px}.entity-status.ok{color:var(--success-color,#2e9d62)}
       .entity-add-row{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:10px;margin:10px 0}
+      .entity-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+      .entity-actions{display:flex;gap:8px;margin-top:8px}
       .days{display:flex;flex-wrap:wrap;gap:8px}.days label{border:1px solid var(--divider-color,#aaa);border-radius:8px;padding:8px;display:flex;gap:5px;align-items:center;font-size:13px}.days input{width:16px}
       button{background:var(--primary-color,#1976d2);border:0;border-radius:9px;color:white;padding:11px 16px;cursor:pointer;font-size:14px}
       button.secondary,.tabs button{background:var(--secondary-background-color,#777);color:var(--primary-text-color)}
@@ -553,94 +554,17 @@ class KilnEmployeesPanel extends HTMLElement {
 
   renderEntities(shell) {
     shell.append(this.el('h2', { text: 'Entity Settings' }));
-    shell.append(this.el('p', { class: 'muted', text: 'These Home Assistant entities provide the signals used by the integration. Select Edit Entities to make changes.' }));
-    if (!this.entitiesEditing) {
-      const card = this.el('div', { class: 'card' });
-      for (const info of Object.values(this.entities)) {
-        const row = this.el('div', { class: 'entity-row' });
-        row.append(this.el('strong', { text: info.label }));
-        row.append(this.el('div', { class: 'muted', text: info.entity_id }));
-        const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
-        row.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }));
-        card.append(row);
-      }
-      card.append(this.el('h3', { text: 'Additional Entities' }));
-      if (!this.additionalEntities.length) {
-        card.append(this.el('p', { class: 'muted', text: 'No additional entities configured.' }));
-      } else {
-        for (const info of this.additionalEntities) {
-          const row = this.el('div', { class: 'entity-row' });
-          row.append(this.el('strong', { text: info.label }));
-          row.append(this.el('div', { class: 'muted', text: info.entity_id }));
-          const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
-          row.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }));
-          card.append(row);
-        }
-      }
-      shell.append(card);
-      const edit = this.el('button', { text: 'Edit Entities' });
-      edit.onclick = () => { this.entitiesEditing = true; this.notice = ''; this.render(); };
-      shell.append(edit);
-      return;
-    }
-    const form = this.el('form', { class: 'card' });
-    shell.append(form);
-    form.append(this.el('h3', { text: 'Active Integration Entities' }));
-    const fixedInputs = {};
-    for (const [key, info] of Object.entries(this.entities)) {
-      const wrap = this.el('div', { class: 'entity-row' });
-      const field = this.field(wrap, info.label, key, 'text', info.entity_id);
-      field.required = true;
-      fixedInputs[key] = field;
-      const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
-      wrap.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }));
-      form.append(wrap);
-    }
-    form.append(this.el('hr'));
-    form.append(this.el('h3', { text: 'Additional Entities' }));
-    form.append(this.el('p', { class: 'muted', text: 'Add future alarm, kiln, or status entities here. Saving an entity does not enable an alert by itself; its behavior will be configured when that feature is added.' }));
-    const additionalBox = this.el('div');
-    form.append(additionalBox);
-    const renderAdditional = () => {
-      additionalBox.replaceChildren();
-      this.entityRows.forEach((item, index) => {
-        const row = this.el('div', { class: 'entity-add-row' });
-        const name = this.field(row, 'Name', 'name', 'text', item.name || '');
-        const entity = this.field(row, 'Entity ID', 'entity_id', 'text', item.entity_id || '');
-        const remove = this.el('button', { text: 'Remove', class: 'secondary' });
-        remove.type = 'button';
-        remove.onclick = () => { this.entityRows.splice(index, 1); renderAdditional(); };
-        row.append(remove);
-        item.inputs = { name, entity };
-        additionalBox.append(row);
-      });
-    };
-    this.entityRows = this.additionalEntities.map(item => ({ name: item.name, entity_id: item.entity_id }));
-    renderAdditional();
-    const add = this.el('button', { text: '+ Add Entity', class: 'secondary' });
-    add.type = 'button';
-    add.onclick = () => { this.entityRows.push({ name: '', entity_id: '' }); renderAdditional(); };
-    form.append(add);
-    const save = this.el('button', { text: 'Save Entity Settings' });
-    save.type = 'submit';
-    const actions = this.el('div', { class: 'actions' });
-    const cancel = this.el('button', { text: 'Cancel', class: 'secondary' });
-    cancel.type = 'button';
-    cancel.onclick = () => { this.entitiesEditing = false; this.render(); };
-    actions.append(cancel);
-    actions.append(save);
-    form.append(actions);
-    form.onsubmit = async event => {
-      event.preventDefault();
+    shell.append(this.el('p', { class: 'muted', text: 'Each entity can be edited independently. Home Assistant checks the entity state after saving.' }));
+    const card = this.el('div', { class: 'card' });
+    shell.append(card);
+    const persist = async (entities, additionalEntities) => {
       if (this.busy) return;
-      const entities = Object.fromEntries(Object.entries(fixedInputs).map(([key, input]) => [key, input.value.trim()]));
-      const additionalEntities = this.entityRows.map(item => ({ name: item.inputs.name.value.trim(), entity_id: item.inputs.entity.value.trim() }));
       this.busy = true;
-      save.disabled = true;
       try {
         await this.call('save_entities', { entities, additional_entities: additionalEntities });
-        this.notice = 'Entity settings saved.';
-        this.entitiesEditing = false;
+        this.notice = 'Entity saved.';
+        this.entityEditingKey = null;
+        this.additionalEditingIndex = null;
         await this.load();
       } catch (error) {
         this.error = String(error.message || error);
@@ -649,6 +573,95 @@ class KilnEmployeesPanel extends HTMLElement {
         this.busy = false;
       }
     };
+    const currentEntities = () => Object.fromEntries(
+      Object.entries(this.entities).map(([key, info]) => [key, info.entity_id])
+    );
+    const currentAdditional = () => this.additionalEntities.map(info => ({
+      name: info.label,
+      entity_id: info.entity_id,
+    }));
+    card.append(this.el('h3', { text: 'Active Integration Entities' }));
+    for (const [key, info] of Object.entries(this.entities)) {
+      const row = this.el('div', { class: 'entity-row' });
+      const heading = this.el('div', { class: 'entity-heading' });
+      heading.append(this.el('strong', { text: info.label }));
+      const actions = this.el('div', { class: 'entity-actions' });
+      if (this.entityEditingKey === key) {
+        const input = this.el('input', { type: 'text', value: info.entity_id });
+        input.setAttribute('aria-label', `${info.label} entity ID`);
+        const save = this.el('button', { text: 'Save' });
+        save.type = 'button';
+        save.onclick = () => persist({ ...currentEntities(), [key]: input.value.trim() }, currentAdditional());
+        const cancel = this.el('button', { text: 'Cancel', class: 'secondary' });
+        cancel.type = 'button';
+        cancel.onclick = () => { this.entityEditingKey = null; this.render(); };
+        row.append(heading, input);
+        actions.append(save, cancel);
+      } else {
+        const edit = this.el('button', { text: 'Edit', class: 'secondary' });
+        edit.type = 'button';
+        edit.onclick = () => { this.entityEditingKey = key; this.notice = ''; this.render(); };
+        row.append(heading, this.el('div', { class: 'muted', text: info.entity_id }));
+        actions.append(edit);
+      }
+      const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
+      row.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }), actions);
+      card.append(row);
+    }
+    card.append(this.el('hr'));
+    card.append(this.el('h3', { text: 'Additional Entities' }));
+    card.append(this.el('p', { class: 'muted', text: 'These can be removed or edited independently. Saving an entity does not enable an alert by itself.' }));
+    if (!this.additionalEntities.length) {
+      card.append(this.el('p', { class: 'muted', text: 'No additional entities configured.' }));
+    }
+    this.additionalEntities.forEach((info, index) => {
+      const row = this.el('div', { class: 'entity-row' });
+      const heading = this.el('div', { class: 'entity-heading' });
+      heading.append(this.el('strong', { text: info.label }));
+      const actions = this.el('div', { class: 'entity-actions' });
+      if (this.additionalEditingIndex === index) {
+        const name = this.el('input', { type: 'text', value: info.label });
+        const entity = this.el('input', { type: 'text', value: info.entity_id });
+        name.setAttribute('aria-label', 'Additional entity name');
+        entity.setAttribute('aria-label', 'Additional entity ID');
+        const save = this.el('button', { text: 'Save' });
+        save.type = 'button';
+        save.onclick = () => {
+          const additional = currentAdditional();
+          additional[index] = { name: name.value.trim(), entity_id: entity.value.trim() };
+          persist(currentEntities(), additional);
+        };
+        const cancel = this.el('button', { text: 'Cancel', class: 'secondary' });
+        cancel.type = 'button';
+        cancel.onclick = () => {
+          if (info.isNew) this.additionalEntities.splice(index, 1);
+          this.additionalEditingIndex = null;
+          this.render();
+        };
+        row.append(heading, name, entity);
+        actions.append(save, cancel);
+      } else {
+        const edit = this.el('button', { text: 'Edit', class: 'secondary' });
+        edit.type = 'button';
+        edit.onclick = () => { this.additionalEditingIndex = index; this.render(); };
+        const remove = this.el('button', { text: 'Remove', class: 'secondary' });
+        remove.type = 'button';
+        remove.onclick = () => persist(currentEntities(), currentAdditional().filter((_, itemIndex) => itemIndex !== index));
+        row.append(heading, this.el('div', { class: 'muted', text: info.entity_id }));
+        actions.append(edit, remove);
+      }
+      const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
+      row.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }), actions);
+      card.append(row);
+    });
+    const add = this.el('button', { text: '+ Add Entity', class: 'secondary' });
+    add.type = 'button';
+    add.onclick = () => {
+      this.additionalEntities.push({ label: 'New Entity', entity_id: '', isNew: true });
+      this.additionalEditingIndex = this.additionalEntities.length - 1;
+      this.render();
+    };
+    card.append(add);
   }
 
   renderManageAlerts(shell) {

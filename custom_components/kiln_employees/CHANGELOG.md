@@ -1,5 +1,9 @@
 # Kiln Employee Manager changelog
 
+## 1.10.1
+
+- Added per-entity Edit, Save, Cancel, and Remove controls.
+
 ## 1.10.0
 
 - Removed the unused Kiln #3 completion-event entity requirement.

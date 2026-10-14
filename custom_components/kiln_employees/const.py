@@ -10,7 +10,7 @@ STORAGE_KEY = "kiln_employee_manager"
 
 PANEL_URL_PATH = "kiln-employees"
 PANEL_STATIC_URL = "/kiln-employees-static/panel.js"
-PANEL_CACHE_VERSION = 20
+PANEL_CACHE_VERSION = 21
 DEFAULT_ENTITIES = {
     "time_off_calendar": "calendar.kiln_employee_time_off",
     "kiln_3_status": "sensor.kiln_3_status",
