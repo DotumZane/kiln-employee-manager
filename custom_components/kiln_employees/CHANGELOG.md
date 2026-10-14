@@ -1,5 +1,9 @@
 # Kiln Employee Manager changelog
 
+## 1.9.1
+
+- Fixed Home Assistant startup compatibility for dynamic entity listeners.
+
 ## 1.9.0
 
 - Added an admin-only Entity Settings page with live existence/state checks.

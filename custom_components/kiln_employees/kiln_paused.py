@@ -3,9 +3,8 @@
 import logging
 from datetime import timedelta
 
-from homeassistant.core import callback
-from homeassistant.core import EVENT_STATE_CHANGED
-from homeassistant.helpers.event import async_track_event, async_track_time_interval
+from homeassistant.core import EVENT_STATE_CHANGED, callback
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from .binary_sensor import employee_eligible
@@ -113,7 +112,7 @@ async def async_setup_paused(hass, entry, manager):
     # it does not immediately send a notification after a restart.
     await check()
     entry.async_on_unload(
-        async_track_event(hass, EVENT_STATE_CHANGED, on_status_change)
+        hass.bus.async_listen(EVENT_STATE_CHANGED, on_status_change)
     )
     entry.async_on_unload(
         async_track_time_interval(hass, check, timedelta(seconds=5))

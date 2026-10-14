@@ -4,7 +4,6 @@ import logging
 from datetime import datetime
 
 from homeassistant.core import EVENT_STATE_CHANGED, HomeAssistant, callback
-from homeassistant.helpers.event import async_track_event
 from homeassistant.util import dt as dt_util
 
 from .binary_sensor import employee_eligible
@@ -132,5 +131,5 @@ async def async_setup_completion(
             await persist_processed_ids()
 
     entry.async_on_unload(
-        async_track_event(hass, EVENT_STATE_CHANGED, on_completion_event)
+        hass.bus.async_listen(EVENT_STATE_CHANGED, on_completion_event)
     )
