@@ -1,5 +1,9 @@
 # Kiln Employee Manager changelog
 
+## 1.10.2
+
+- Moved each entity row's action buttons to the right side of the row.
+
 ## 1.10.1
 
 - Added per-entity Edit, Save, Cancel, and Remove controls.

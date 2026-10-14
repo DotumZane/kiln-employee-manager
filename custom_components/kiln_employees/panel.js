@@ -179,11 +179,12 @@ class KilnEmployeesPanel extends HTMLElement {
       input,select{background:var(--card-background-color,#fff);color:var(--primary-text-color);border:1px solid var(--divider-color,#aaa);border-radius:8px;padding:11px;font:inherit;box-sizing:border-box;width:100%}
       input[type=checkbox]{width:20px;height:20px;accent-color:var(--primary-color,#1976d2)}
       .check{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px}
-      .entity-row{border-bottom:1px solid var(--divider-color);padding:4px 0 10px;margin-bottom:8px}
+      .entity-row{position:relative;border-bottom:1px solid var(--divider-color);padding:4px 120px 10px 0;margin-bottom:8px;min-height:54px}
       .entity-status{font-size:13px;margin-top:4px}.entity-status.ok{color:var(--success-color,#2e9d62)}
       .entity-add-row{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:10px;margin:10px 0}
       .entity-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
-      .entity-actions{display:flex;gap:8px;margin-top:8px}
+      .entity-actions{position:absolute;right:0;top:7px;display:flex;gap:8px;margin:0}
+      @media (max-width:550px){.entity-row{padding-right:0;padding-bottom:52px}.entity-actions{top:auto;bottom:8px}}
       .days{display:flex;flex-wrap:wrap;gap:8px}.days label{border:1px solid var(--divider-color,#aaa);border-radius:8px;padding:8px;display:flex;gap:5px;align-items:center;font-size:13px}.days input{width:16px}
       button{background:var(--primary-color,#1976d2);border:0;border-radius:9px;color:white;padding:11px 16px;cursor:pointer;font-size:14px}
       button.secondary,.tabs button{background:var(--secondary-background-color,#777);color:var(--primary-text-color)}
