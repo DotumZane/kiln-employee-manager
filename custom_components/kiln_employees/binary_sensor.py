@@ -171,6 +171,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             manager["vacation_events"] = []
             sync_employees()
             return
+        # The legacy calendar is optional. If it has been removed, finalize
+        # the migration automatically and use the integration's persistent
+        # Time Off records as the sole source of truth. A present-but-broken
+        # calendar entity still fails closed below so temporary HA/calendar
+        # outages cannot accidentally make employees eligible.
+        if hass.states.get(CALENDAR) is None:
+            manager["data"]["time_off_migrated"] = True
+            manager["vacation_ok"] = True
+            manager["vacation_events"] = []
+            try:
+                await manager["store"].async_save(manager["data"])
+            except Exception:
+                manager["data"]["time_off_migrated"] = False
+                manager["vacation_ok"] = False
+                _LOGGER.exception("Could not finalize legacy vacation migration")
+            sync_employees()
+            return
         if refresh_running:
             return
         refresh_running = True

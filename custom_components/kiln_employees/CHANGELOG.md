@@ -1,5 +1,12 @@
 # Kiln Employee Manager changelog
 
+## 1.6.4
+
+- Automatically completes the legacy vacation-calendar migration when the old
+  calendar entity is absent.
+- Uses the integration's built-in Time Off records without requiring a legacy
+  calendar, helper, automation, or script.
+
 ## 1.6.3
 
 - Polished section headers and action alignment.
