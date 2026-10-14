@@ -1,4 +1,4 @@
-// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.6.5).
+// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.7.0).
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 class KilnEmployeesPanel extends HTMLElement {
@@ -150,6 +150,7 @@ class KilnEmployeesPanel extends HTMLElement {
     return {
       alert_plc_lost: 'PLC Communication Lost',
       alert_plc_restored: 'PLC Communication Restored',
+      alert_kiln_paused: 'Kiln #3 Paused',
       kiln_completion: 'Kiln #3 Stopped',
     }[kind] || String(kind || 'Notification');
   }
@@ -542,7 +543,7 @@ class KilnEmployeesPanel extends HTMLElement {
 
   renderManageAlerts(shell) {
     shell.append(this.el('h2', { text: 'Manage Alerts' }));
-    shell.append(this.el('div', { class: 'note', text: 'These delays apply globally, not per employee. Kiln #3 stop notifications use the Node-RED completion event. Future equipment-alarm delivery is not enabled.' }));
+    shell.append(this.el('div', { class: 'note', text: 'These delays apply globally, not per employee. Kiln #3 stop notifications use the Node-RED completion event. Paused alerts use sensor.kiln_3_status with the exact state Paused.' }));
     const form = this.el('form', { class: 'card' });
     shell.append(form);
     form.append(this.el('h3', { text: 'Global PLC Communication Delays' }));
@@ -554,11 +555,16 @@ class KilnEmployeesPanel extends HTMLElement {
     const enableLost = this.field(form, 'Enable PLC Communication Lost Alerts', 'plc_lost_enabled', 'checkbox', this.settings.plc_lost_enabled ?? true);
     const enableRestored = this.field(form, 'Enable PLC Communication Restored Alerts', 'plc_restored_enabled', 'checkbox', this.settings.plc_restored_enabled ?? true);
     form.append(this.el('hr'));
+    form.append(this.el('h3', { text: 'Kiln #3 Paused Alert' }));
+    const paused = this.numberField(form, 'Send after paused for (seconds)', 'paused', this.settings.kiln_paused_delay_seconds ?? 300, 0, 3600);
+    form.append(this.el('p', { class: 'muted', text: 'The timer starts when sensor.kiln_3_status changes to exactly Paused and resets when the status changes. A value of 0 sends on the next monitor check.' }));
+    const enablePaused = this.field(form, 'Enable Kiln Paused Alerts', 'kiln_paused_enabled', 'checkbox', this.settings.kiln_paused_enabled ?? false);
+    form.append(this.el('hr'));
     form.append(this.el('h3', { text: 'Kiln #3 — Alert Recipients' }));
     form.append(this.el('p', { class: 'muted', text: 'Choose which employees receive each alert. Their assigned kiln, shift/24/7, vacation, manual Time Off, and notification-enabled setting are still respected. Only App notifications send currently; SMS is not configured.' }));
     const table = this.el('table', { class: 'recipients' });
     const header = this.el('tr');
-    for (const label of ['Employee', 'Communication Lost', 'Communication Restored']) header.append(this.el('th', { text: label }));
+    for (const label of ['Employee', 'Communication Lost', 'Communication Restored', 'Kiln Paused']) header.append(this.el('th', { text: label }));
     table.append(header);
     const recipientRows = [];
     for (const employee of this.data) {
@@ -568,16 +574,17 @@ class KilnEmployeesPanel extends HTMLElement {
       if (!(employee.kilns || []).includes('3')) name.append(this.el('div', { class: 'muted', text: 'Not assigned to Kiln #3' }));
       row.append(name);
       const flags = [];
-      for (const key of ['alert_plc_lost', 'alert_plc_restored']) {
+      for (const key of ['alert_plc_lost', 'alert_plc_restored', 'alert_kiln_paused']) {
         const cell = this.el('td');
         const check = this.el('input', { type: 'checkbox', checked: employee[key] ?? false });
-        check.setAttribute('aria-label', `${employee.name}: ${key === 'alert_plc_lost' ? 'Communication Lost' : 'Communication Restored'}`);
+        const label = key === 'alert_plc_lost' ? 'Communication Lost' : key === 'alert_plc_restored' ? 'Communication Restored' : 'Kiln Paused';
+        check.setAttribute('aria-label', `${employee.name}: ${label}`);
         cell.append(check);
         row.append(cell);
         flags.push(check);
       }
       table.append(row);
-      recipientRows.push({ employee_id: employee.id, lost: flags[0], restored: flags[1] });
+      recipientRows.push({ employee_id: employee.id, lost: flags[0], restored: flags[1], paused: flags[2] });
     }
     form.append(table);
     if (!this.data.length) form.append(this.el('p', { class: 'muted', text: 'Add an employee first to assign alert recipients.' }));
@@ -589,10 +596,11 @@ class KilnEmployeesPanel extends HTMLElement {
     form.onsubmit = async event => {
       event.preventDefault();
       if (this.busy) return;
-      let lostSeconds, restoredSeconds;
+      let lostSeconds, restoredSeconds, pausedSeconds;
       try {
         lostSeconds = KilnEmployeesPanel.parseIntInRange(lost, 0, 3600);
         restoredSeconds = KilnEmployeesPanel.parseIntInRange(restored, 0, 3600);
+        pausedSeconds = KilnEmployeesPanel.parseIntInRange(paused, 0, 3600);
       } catch (error) {
         this.error = error.message;
         this.render();
@@ -606,9 +614,11 @@ class KilnEmployeesPanel extends HTMLElement {
           plc_restored_delay_seconds: restoredSeconds,
           plc_lost_enabled: enableLost.checked,
           plc_restored_enabled: enableRestored.checked,
-          recipients: recipientRows.map(row => ({ employee_id: row.employee_id, lost: row.lost.checked, restored: row.restored.checked })),
+          kiln_paused_delay_seconds: pausedSeconds,
+          kiln_paused_enabled: enablePaused.checked,
+          recipients: recipientRows.map(row => ({ employee_id: row.employee_id, lost: row.lost.checked, restored: row.restored.checked, paused: row.paused.checked })),
         });
-        this.notice = 'Global PLC alert settings and recipients saved.';
+        this.notice = 'Alert settings and recipients saved.';
         await this.load();
       } catch (error) {
         this.error = String(error.message || error);

@@ -18,6 +18,7 @@ from .const import (
 )
 from .plc_alerts import async_setup_alerts
 from .completion import async_setup_completion
+from .kiln_paused import async_setup_paused
 from homeassistant.const import Platform
 
 PLATFORM_LIST = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
@@ -49,6 +50,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data["settings"].setdefault("plc_restored_delay_seconds", 15)
     data["settings"].setdefault("plc_lost_enabled", True)
     data["settings"].setdefault("plc_restored_enabled", True)
+    data["settings"].setdefault("kiln_paused_delay_seconds", 300)
+    data["settings"].setdefault("kiln_paused_enabled", False)
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "store": store,
@@ -66,6 +69,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     panel_api.register(hass)
     await async_setup_alerts(hass, entry, hass.data[DOMAIN][entry.entry_id])
     await async_setup_completion(hass, entry, hass.data[DOMAIN][entry.entry_id])
+    await async_setup_paused(hass, entry, hass.data[DOMAIN][entry.entry_id])
     # Static paths are also process-global and have no supported removal API.
     # Register once so an integration reload does not attempt to register a
     # duplicate path.

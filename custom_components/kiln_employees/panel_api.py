@@ -12,6 +12,7 @@ from .time_off import REASONS, validate_range, convert_legacy_event
 
 DEFAULT_PLC_LOST_SECONDS = 30
 DEFAULT_PLC_RESTORED_SECONDS = 15
+DEFAULT_KILN_PAUSED_SECONDS = 300
 MAX_PLC_DELAY_SECONDS = 3600
 
 
@@ -250,6 +251,8 @@ async def ws_test_notification(hass, connection, msg):
     vol.Required("plc_restored_delay_seconds"): int,
     vol.Required("plc_lost_enabled"): bool,
     vol.Required("plc_restored_enabled"): bool,
+    vol.Required("kiln_paused_delay_seconds"): int,
+    vol.Required("kiln_paused_enabled"): bool,
     vol.Required("recipients"): list,
 })
 @websocket_api.require_admin
@@ -262,9 +265,13 @@ async def ws_save_alert_settings(hass, connection, msg):
         return
     lost = msg["plc_lost_delay_seconds"]
     restored = msg["plc_restored_delay_seconds"]
+    paused = msg["kiln_paused_delay_seconds"]
     if (isinstance(lost, bool) or isinstance(restored, bool)
             or not (0 <= lost <= MAX_PLC_DELAY_SECONDS)
             or not (0 <= restored <= MAX_PLC_DELAY_SECONDS)):
+        connection.send_error(msg["id"], "invalid_delay", "Delays must be 0–3600 whole seconds")
+        return
+    if isinstance(paused, bool) or not 0 <= paused <= MAX_PLC_DELAY_SECONDS:
         connection.send_error(msg["id"], "invalid_delay", "Delays must be 0–3600 whole seconds")
         return
     employees = mgr["data"].setdefault("employees", [])
@@ -273,7 +280,8 @@ async def ws_save_alert_settings(hass, connection, msg):
     for row in msg["recipients"]:
         if (not isinstance(row, dict) or not isinstance(row.get("employee_id"), str)
                 or type(row.get("lost")) is not bool
-                or type(row.get("restored")) is not bool):
+                or type(row.get("restored")) is not bool
+                or type(row.get("paused")) is not bool):
             connection.send_error(msg["id"], "invalid_recipients", "Invalid recipient settings")
             return
         employee_id = row["employee_id"]
@@ -286,7 +294,7 @@ async def ws_save_alert_settings(hass, connection, msg):
         return
 
     previous_settings = dict(mgr["data"].setdefault("settings", {}))
-    previous_recipients = {e["id"]: (e.get("alert_plc_lost", False), e.get("alert_plc_restored", False))
+    previous_recipients = {e["id"]: (e.get("alert_plc_lost", False), e.get("alert_plc_restored", False), e.get("alert_kiln_paused", False))
                            for e in employees}
     settings = mgr["data"]["settings"]
     settings.update({
@@ -294,17 +302,20 @@ async def ws_save_alert_settings(hass, connection, msg):
         "plc_restored_delay_seconds": restored,
         "plc_lost_enabled": msg["plc_lost_enabled"],
         "plc_restored_enabled": msg["plc_restored_enabled"],
+        "kiln_paused_delay_seconds": paused,
+        "kiln_paused_enabled": msg["kiln_paused_enabled"],
     })
     for employee in employees:
         row = selections[employee["id"]]
         employee["alert_plc_lost"] = row["lost"]
         employee["alert_plc_restored"] = row["restored"]
+        employee["alert_kiln_paused"] = row["paused"]
     try:
         await mgr["store"].async_save(mgr["data"])
     except Exception:
         mgr["data"]["settings"] = previous_settings
         for employee in employees:
-            employee["alert_plc_lost"], employee["alert_plc_restored"] = previous_recipients[employee["id"]]
+            employee["alert_plc_lost"], employee["alert_plc_restored"], employee["alert_kiln_paused"] = previous_recipients[employee["id"]]
         raise
     for listener in tuple(mgr.get("listeners", ())):
         listener()

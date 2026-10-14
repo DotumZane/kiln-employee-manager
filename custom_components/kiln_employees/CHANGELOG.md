@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.7.0
+
+- Added configurable Kiln #3 paused notifications based on
+  `sensor.kiln_3_status == Paused`.
+
 ## 1.6.6
 
 - Uses Home Assistant's current target format when reading the legacy vacation
