@@ -1,0 +1,16 @@
+# Python bytecode and local caches
+__pycache__/
+*.py[cod]
+
+# Local packaging artifacts
+*.tar.gz
+*.zip
+
+# Editor and operating-system files
+.DS_Store
+.vscode/
+
+# Home Assistant runtime data must never be committed
+.storage/
+secrets.yaml
+

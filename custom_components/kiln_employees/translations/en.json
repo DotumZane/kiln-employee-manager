@@ -1,0 +1,144 @@
+{
+  "title": "Kiln Employee Manager",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Kiln Employee Manager",
+        "description": "Set up kiln employee notification management."
+      }
+    },
+    "abort": {
+      "already_configured": "Already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Employee Management",
+        "menu_options": {
+          "add": "Add Employee",
+          "edit_select": "Edit Employee",
+          "set_active_select": "Activate / Deactivate Employee",
+          "delete_select": "Delete Employee",
+          "list": "View Employees"
+        }
+      },
+      "add": {
+        "title": "Add Employee",
+        "data": {
+          "name": "Employee Name",
+          "phone": "Phone Number (+15035550123)",
+          "workdays": "Scheduled Workdays",
+          "shift_start": "Shift Start",
+          "shift_end": "Shift End",
+          "buffer_before": "Minutes Before Shift",
+          "buffer_after": "Minutes After Shift",
+          "kilns": "Assigned Kilns",
+          "sms_enabled": "SMS Notifications Enabled",
+          "use_mobile_app": "Use Home Assistant Mobile Notification Instead of SMS",
+          "mobile_notify_service": "Mobile Device to Notify"
+        }
+      },
+      "edit_select": {
+        "title": "Select Employee to Edit",
+        "data": {
+          "employee": "Employee"
+        }
+      },
+      "edit": {
+        "title": "Edit Employee",
+        "data": {
+          "name": "Employee Name",
+          "phone": "Phone Number",
+          "workdays": "Scheduled Workdays",
+          "shift_start": "Shift Start",
+          "shift_end": "Shift End",
+          "buffer_before": "Minutes Before Shift",
+          "buffer_after": "Minutes After Shift",
+          "kilns": "Assigned Kilns",
+          "sms_enabled": "SMS Notifications Enabled",
+          "use_mobile_app": "Use Home Assistant Mobile Notification Instead of SMS",
+          "mobile_notify_service": "Mobile Device to Notify"
+        }
+      },
+      "set_active_select": {
+        "title": "Choose Employee to Activate or Deactivate",
+        "data": {
+          "employee": "Employee"
+        }
+      },
+      "set_active": {
+        "title": "Activate / Deactivate Employee",
+        "description": "Change the status of {employee}.",
+        "data": {
+          "active": "Employee Active"
+        }
+      },
+      "delete_select": {
+        "title": "Select Employee to Delete",
+        "data": {
+          "employee": "Employee"
+        }
+      },
+      "delete_confirm": {
+        "title": "Confirm Permanent Deletion",
+        "description": "Delete {employee} permanently? Their saved employee profile and eligibility sensor will be removed. Existing vacation calendar events are not deleted.",
+        "data": {
+          "confirm_delete": "Yes, permanently delete this employee"
+        }
+      },
+      "list": {
+        "title": "Registered Employees",
+        "description": "{employees}"
+      },
+      "delivery": {
+        "title": "Notification Method",
+        "description": "SMS is the default. Choose mobile app to select a registered device on the next screen.",
+        "data": {
+          "use_mobile_app": "Use Home Assistant App Instead of SMS"
+        }
+      },
+      "details": {
+        "title": "Employee Details",
+        "data": {
+          "name": "Employee Name",
+          "phone": "SMS Phone Number (+15035550123)",
+          "mobile_notify_service": "Mobile App Device",
+          "workdays": "Working Days",
+          "shift_start": "Shift Start",
+          "shift_end": "Shift End",
+          "buffer_before": "Minutes Before Shift",
+          "buffer_after": "Minutes After Shift",
+          "kilns": "Assigned Kilns",
+          "sms_enabled": "Notifications Enabled",
+          "use_mobile_app": "Use Home Assistant App Instead of SMS",
+          "all_day": "24/7 Notifications"
+        },
+        "description": "Single-screen editor. With 24/7 on, workdays and shift times are ignored. For App notifications, the phone number is ignored; for SMS, the app device is ignored."
+      },
+      "schedule_mode": {
+        "title": "Notification Schedule",
+        "description": "Enable 24/7 to skip workday and shift-hour fields on the next screen. Time off and notification disable still apply.",
+        "data": {
+          "all_day": "24/7"
+        }
+      }
+    },
+    "error": {
+      "invalid_name": "Enter an employee name.",
+      "invalid_phone": "Use international phone format, for example +15035550123.",
+      "missing_workdays": "Select at least one workday.",
+      "missing_kilns": "Select at least one kiln.",
+      "invalid_time": "Enter valid, different shift start and end times.",
+      "duplicate_name": "An employee with this name already exists.",
+      "missing_mobile_device": "Select a Home Assistant mobile device.",
+      "invalid_mobile_device": "Selected mobile device has no registered notification service."
+    },
+    "abort": {
+      "employee_limit": "Maximum of 10 employees reached.",
+      "no_employees": "No employees have been registered.",
+      "employee_missing": "Employee not found.",
+      "delete_cancelled": "Employee deletion cancelled."
+    }
+  }
+}
