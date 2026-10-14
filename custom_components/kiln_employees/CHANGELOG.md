@@ -1,5 +1,14 @@
 # Kiln Employee Manager changelog
 
+## 1.11.0
+
+- Added Home Assistant-side interpretation of raw Kiln #3 PLC MQTT data.
+- Added PLC clock heartbeat tracking with a 15-second stale-data timeout.
+- Preserved the existing MQTT entity IDs and notification behavior during the
+  migration away from Node-RED-derived kiln status.
+- Node-RED can now be reduced to a read-only raw MQTT bridge on
+  `plant/kiln3/raw`.
+
 ## 1.10.2
 
 - Moved each entity row's action buttons to the right side of the row.

@@ -1,12 +1,12 @@
 {
   "domain": "kiln_employees",
   "name": "Kiln Employee Manager",
-  "version": "1.10.2",
+  "version": "1.11.0",
   "documentation": "https://developers.home-assistant.io/",
   "config_flow": true,
   "integration_type": "hub",
   "iot_class": "calculated",
   "requirements": [],
-  "dependencies": [],
+  "dependencies": ["mqtt"],
   "codeowners": []
 }
