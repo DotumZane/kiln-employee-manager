@@ -1,5 +1,11 @@
 # Kiln Employee Manager changelog
 
+## 1.6.1
+
+- Removed the charge ID from the employee-facing completion notification.
+- Renamed the Node-RED signal to `sensor.kiln_3_completion_event`; its state is
+  an internal changing event token, not a displayed charge identifier.
+
 ## 1.6.0
 
 - Added Node-RED-driven Kiln #3 completion notifications.

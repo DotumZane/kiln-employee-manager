@@ -1,4 +1,4 @@
-"""Kiln completion notifications driven by an explicit Node-RED completion ID."""
+"""Kiln completion notifications driven by an explicit Node-RED event token."""
 
 import logging
 from datetime import datetime
@@ -31,10 +31,10 @@ def _is_assigned(employee: dict) -> bool:
 async def async_setup_completion(
     hass: HomeAssistant, entry, manager: dict
 ) -> None:
-    """Listen for Node-RED's explicit, unique completion identifier."""
+    """Listen for Node-RED's explicit, changing completion event token."""
     data = manager["data"]
     state = manager["completion_monitor"] = {
-        "processed_ids": list(data.get("kiln_3_processed_completion_ids", [])),
+        "processed_ids": list(data.get("kiln_3_processed_completion_events", [])),
         "busy": False,
     }
     state["processed_ids"] = [
@@ -42,15 +42,12 @@ async def async_setup_completion(
     ][-MAX_PROCESSED_IDS:]
 
     async def persist_processed_ids() -> None:
-        data["kiln_3_processed_completion_ids"] = state["processed_ids"]
+        data["kiln_3_processed_completion_events"] = state["processed_ids"]
         await manager["store"].async_save(data)
 
     async def emit(completion_id: str, completed_at: datetime | None) -> None:
         title = "Kiln #3 Drying Charge Complete"
-        message = (
-            f"Kiln #3 has completed its drying schedule. "
-            f"Charge ID: {completion_id}."
-        )
+        message = "Kiln #3 has completed its drying schedule."
         attempted = []
         local_now = dt_util.as_local(dt_util.utcnow())
         for employee in list(data.get("employees", [])):

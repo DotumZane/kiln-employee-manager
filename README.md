@@ -15,15 +15,15 @@ reloaded through the Home Assistant integration reload control.
 
 ## Current version
 
-The current release is **1.6.0**. See
+The current release is **1.6.1**. See
 [`custom_components/kiln_employees/CHANGELOG.md`](custom_components/kiln_employees/CHANGELOG.md)
 for release notes.
 
 ## Node-RED completion signal
 
 Node-RED remains responsible for deciding when a charge is complete. It must
-publish a new unique value to `sensor.kiln_3_completion_id` for each completed
-charge. The integration treats each new value as one completion event and
-sends this notification to eligible Kiln #3 employees:
+publish a new changing value to `sensor.kiln_3_completion_event` for each
+completed charge. The value is used only as an internal deduplication token and
+is not included in the employee notification. The integration sends:
 
-> Kiln #3 has completed its drying schedule. Charge ID: `<completion_id>`.
+> Kiln #3 has completed its drying schedule.
