@@ -27,7 +27,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 _PREFIX = "Program:Kiln1."
 _CLOCK = "PLC_ClockValues[5]"
-_HEARTBEAT_TIMEOUT = 15
+_HEARTBEAT_TIMEOUT = 5
 _BOOL_TAGS = {"Kiln1_ON", "Kiln1_Pause", "Normal_Stop", "Kiln_Down"}
 _REQUIRED = _BOOL_TAGS | {"Step_Number", "Step_Stop"}
 
@@ -161,7 +161,7 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
     entry.async_on_unload(unsubscribe)
     entry.async_on_unload(
         async_track_time_interval(
-            hass, on_tick, timedelta(seconds=5)
+            hass, on_tick, timedelta(seconds=1)
         )
     )
     await publish_current()

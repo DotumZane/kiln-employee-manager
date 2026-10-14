@@ -1,7 +1,7 @@
 """Shared constants for the Kiln Employee Manager integration."""
 
 DOMAIN = "kiln_employees"
-INTEGRATION_VERSION = "1.11.0"
+INTEGRATION_VERSION = "1.11.1"
 
 # Persistent storage schema version.  Keep this separate from the integration
 # version: changing code does not automatically require a data migration.

@@ -15,7 +15,7 @@ reloaded through the Home Assistant integration reload control.
 
 ## Current version
 
-The current release is **1.11.0**. See
+The current release is **1.11.1**. See
 [`custom_components/kiln_employees/CHANGELOG.md`](custom_components/kiln_employees/CHANGELOG.md)
 for release notes.
 
@@ -23,7 +23,7 @@ for release notes.
 
 Node-RED reads the PLC and publishes the raw JSON tag object to
 `plant/kiln3/raw`. The integration interprets the raw data, tracks the
-`PLC_ClockValues[5]` heartbeat, publishes the existing Kiln #3 MQTT entity
+`PLC_ClockValues[5]` heartbeat with a five-second stale-data timeout, publishes the existing Kiln #3 MQTT entity
 topics, and owns pause/stop/completion decisions. Node-RED must no longer
 publish the derived `plant/kiln3/status` and related value topics after the
 cutover, or the two publishers could race.

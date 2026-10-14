@@ -1,9 +1,15 @@
 # Kiln Employee Manager changelog
 
+## 1.11.1
+
+- Changed the PLC clock stale-data timeout to 5 seconds.
+- Checks heartbeat freshness every second so communication status changes
+  promptly after the timeout.
+
 ## 1.11.0
 
 - Added Home Assistant-side interpretation of raw Kiln #3 PLC MQTT data.
-- Added PLC clock heartbeat tracking with a 15-second stale-data timeout.
+- Added PLC clock heartbeat tracking with a configurable stale-data timeout.
 - Preserved the existing MQTT entity IDs and notification behavior during the
   migration away from Node-RED-derived kiln status.
 - Node-RED can now be reduced to a read-only raw MQTT bridge on
