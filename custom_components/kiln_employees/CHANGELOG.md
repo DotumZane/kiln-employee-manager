@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.11.2
+
+- Treats raw MQTT payloads with missing or invalid PLC operating tags as
+  `Unknown` instead of reusing an older valid kiln reading.
+
 ## 1.11.1
 
 - Changed the PLC clock stale-data timeout to 5 seconds.

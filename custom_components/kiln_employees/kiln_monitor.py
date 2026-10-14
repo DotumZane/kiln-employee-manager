@@ -82,17 +82,18 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
         "last_clock": None,
         "last_clock_change": None,
         "values": None,
+        "data_valid": False,
         "last_published_connected": None,
     }
 
     async def publish(topic: str, payload, *, retain: bool = False) -> None:
         await mqtt.async_publish(hass, topic, payload, qos=0, retain=retain)
 
-    async def publish_unknown() -> None:
+    async def publish_unknown(communication_ok: bool) -> None:
         data = {
             "status": "Unknown",
             "dataFresh": False,
-            "communicationOK": False,
+            "communicationOK": communication_ok,
         }
         await publish(KILN_3_STATUS_MQTT_TOPIC, json.dumps(data))
         await publish(KILN_3_COMMUNICATION_MQTT_TOPIC, "OFF")
@@ -104,9 +105,9 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
             state["last_clock_change"] is not None
             and now - state["last_clock_change"] <= _HEARTBEAT_TIMEOUT
         )
-        if not fresh or values is None:
+        if not fresh or values is None or not state["data_valid"]:
             if state["last_published_connected"] is not False:
-                await publish_unknown()
+                await publish_unknown(fresh)
                 state["last_published_connected"] = False
             return
 
@@ -150,6 +151,9 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
         values = _validated(incoming)
         if values is not None:
             state["values"] = values
+            state["data_valid"] = True
+        else:
+            state["data_valid"] = False
         await publish_current()
 
     async def on_tick(_now) -> None:
