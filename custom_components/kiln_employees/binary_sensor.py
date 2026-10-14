@@ -10,11 +10,14 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DEFAULT_ENTITIES, DOMAIN
 from .time_off import employee_on_time_off
 
 _LOGGER = logging.getLogger(__name__)
-CALENDAR = "calendar.kiln_employee_time_off"
+def calendar_entity(manager: dict) -> str:
+    return manager["data"].get("entities", {}).get(
+        "time_off_calendar", DEFAULT_ENTITIES["time_off_calendar"]
+    )
 
 
 def within_notification_window(employee: dict, local_now: datetime) -> bool:
@@ -190,6 +193,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             return
         refresh_running = True
         local_now = dt_util.as_local(dt_util.utcnow())
+        calendar = calendar_entity(manager)
         start = datetime.combine(local_now.date() - timedelta(days=1), time.min, tzinfo=local_now.tzinfo)
         end = start + timedelta(days=4)
         last_error = None
@@ -202,10 +206,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                         "calendar", "get_events",
                         {"start_date_time": start.isoformat(),
                          "end_date_time": end.isoformat()},
-                        target={"entity_id": [CALENDAR]},
+                        target={"entity_id": [calendar]},
                         blocking=True, return_response=True,
                     )
-                    payload = response.get(CALENDAR, {}) if isinstance(response, dict) else {}
+                    payload = response.get(calendar, {}) if isinstance(response, dict) else {}
                     events = payload.get("events")
                     if not isinstance(events, list):
                         raise ValueError("Missing calendar event list")
@@ -224,11 +228,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 # failures exceed the limit.
                 if calendar_failures >= CALENDAR_FAILURE_LIMIT:
                     manager["vacation_ok"] = False
-                    calendar_state = hass.states.get(CALENDAR)
+                    calendar_state = hass.states.get(calendar)
                     _LOGGER.warning(
                         "Kiln vacation check unavailable for %s after %s failed checks "
                         "(state=%s): %s",
-                        CALENDAR,
+                        calendar,
                         calendar_failures,
                         calendar_state.state if calendar_state else "missing",
                         last_error,

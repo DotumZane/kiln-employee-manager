@@ -3,8 +3,8 @@
 import logging
 from datetime import datetime
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.core import EVENT_STATE_CHANGED, HomeAssistant, callback
+from homeassistant.helpers.event import async_track_event
 from homeassistant.util import dt as dt_util
 
 from .binary_sensor import employee_eligible
@@ -101,6 +101,11 @@ async def async_setup_completion(
 
     @callback
     def on_completion_event(event) -> None:
+        entity = manager["data"].get("entities", {}).get(
+            "kiln_3_completion", COMPLETION_ENTITY
+        )
+        if event.data.get("entity_id") != entity:
+            return
         old_state = event.data.get("old_state")
         new_state = event.data.get("new_state")
         if new_state is None or old_state and old_state.state == new_state.state:
@@ -111,7 +116,10 @@ async def async_setup_completion(
         completed_at = new_state.last_changed
         hass.async_create_task(process(completion_id, completed_at))
 
-    current = hass.states.get(COMPLETION_ENTITY)
+    completion_entity = manager["data"].get("entities", {}).get(
+        "kiln_3_completion", COMPLETION_ENTITY
+    )
+    current = hass.states.get(completion_entity)
     current_id = _valid_completion_id(current.state if current else None)
     if current_id and current_id not in state["processed_ids"]:
         if state["processed_ids"]:
@@ -124,5 +132,5 @@ async def async_setup_completion(
             await persist_processed_ids()
 
     entry.async_on_unload(
-        async_track_state_change_event(hass, [COMPLETION_ENTITY], on_completion_event)
+        async_track_event(hass, EVENT_STATE_CHANGED, on_completion_event)
     )

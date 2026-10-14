@@ -15,6 +15,7 @@ from .const import (
     STATIC_REGISTERED_KEY,
     STORAGE_KEY,
     STORAGE_VERSION,
+    DEFAULT_ENTITIES,
 )
 from .plc_alerts import async_setup_alerts
 from .completion import async_setup_completion
@@ -45,6 +46,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data.setdefault("employees", [])
     data.setdefault("time_off", [])
     data.setdefault("time_off_migrated", False)
+    data.setdefault("entities", dict(DEFAULT_ENTITIES))
+    for key, default in DEFAULT_ENTITIES.items():
+        data["entities"].setdefault(key, default)
+    data.setdefault("additional_entities", [])
     data.setdefault("settings", {})
     data["settings"].setdefault("plc_lost_delay_seconds", 30)
     data["settings"].setdefault("plc_restored_delay_seconds", 15)

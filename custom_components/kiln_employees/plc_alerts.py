@@ -10,9 +10,10 @@ from homeassistant.util import dt as dt_util
 from datetime import timedelta
 from .notifications import send_mobile
 from .binary_sensor import employee_eligible
+from .const import DEFAULT_ENTITIES
 
 _LOGGER = logging.getLogger(__name__)
-ENTITY = "binary_sensor.kiln_3_plc_communication"
+ENTITY = DEFAULT_ENTITIES["kiln_3_plc_communication"]
 DEFAULT_LOST_SECONDS = 30
 DEFAULT_RESTORED_SECONDS = 15
 
@@ -71,7 +72,10 @@ async def async_setup_alerts(hass, entry, manager):
             return
         state["busy"] = True
         try:
-            reading = hass.states.get(ENTITY)
+            entity = manager["data"].get("entities", {}).get(
+                "kiln_3_plc_communication", ENTITY
+            )
+            reading = hass.states.get(entity)
             current = reading.state if reading else "unknown"
             now = _now()
             if current not in ("on", "off"):

@@ -5,7 +5,7 @@ import re
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
-from .const import DOMAIN, WS_REGISTERED_KEY
+from .const import DEFAULT_ENTITIES, DOMAIN, ENTITY_LABELS, WS_REGISTERED_KEY
 from .config_flow import validate_employee, DAYS
 from .notifications import send_mobile
 from .time_off import REASONS, validate_range, convert_legacy_event
@@ -14,11 +14,23 @@ DEFAULT_PLC_LOST_SECONDS = 30
 DEFAULT_PLC_RESTORED_SECONDS = 15
 DEFAULT_KILN_PAUSED_SECONDS = 300
 MAX_PLC_DELAY_SECONDS = 3600
+ENTITY_ID_RE = re.compile(r"^[a-z0-9_]+\.[a-z0-9_]+$")
 
 
 def _manager(hass):
     entries = hass.data.get(DOMAIN, {})
     return next((v for v in entries.values() if isinstance(v, dict) and "store" in v), None)
+
+
+def _entity_info(hass, entity_id: str, label: str) -> dict:
+    state = hass.states.get(entity_id)
+    return {
+        "label": label,
+        "entity_id": entity_id,
+        "exists": state is not None,
+        "state": state.state if state else "missing",
+        "friendly_name": state.attributes.get("friendly_name") if state else None,
+    }
 
 
 def _employee_display_status(manager: dict, employee: dict, local_now) -> dict:
@@ -92,6 +104,19 @@ def ws_list(hass, connection, msg):
         "settings": mgr["data"].get("settings", {}),
         "time_off": mgr["data"].get("time_off", []),
         "time_off_migrated": mgr["data"].get("time_off_migrated", False),
+        "entities": {
+            key: _entity_info(
+                hass,
+                mgr["data"].get("entities", {}).get(key, default),
+                ENTITY_LABELS[key],
+            )
+            for key, default in DEFAULT_ENTITIES.items()
+        },
+        "additional_entities": [
+            _entity_info(hass, item["entity_id"], item["name"])
+            for item in mgr["data"].get("additional_entities", [])
+            if isinstance(item, dict) and item.get("entity_id") and item.get("name")
+        ],
     })
 
 
@@ -243,6 +268,59 @@ async def ws_test_notification(hass, connection, msg):
         connection.send_error(msg["id"], "delivery_failed", "Home Assistant could not submit the mobile notification. Check logs.")
         return
     connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): "kiln_employees/save_entities",
+    vol.Required("entities"): dict,
+    vol.Required("additional_entities"): list,
+})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_save_entities(hass, connection, msg):
+    """Save entity mappings used by the integration and future signals."""
+    mgr = _manager(hass)
+    if mgr is None:
+        connection.send_error(msg["id"], "not_ready", "Employee manager is not loaded")
+        return
+    entities = msg["entities"]
+    if set(entities) != set(DEFAULT_ENTITIES) or any(
+        not isinstance(value, str) or not ENTITY_ID_RE.fullmatch(value)
+        for value in entities.values()
+    ):
+        connection.send_error(msg["id"], "invalid_entities", "Enter valid Home Assistant entity IDs")
+        return
+    additional = msg["additional_entities"]
+    if len(additional) > 25:
+        connection.send_error(msg["id"], "invalid_entities", "You can add up to 25 additional entities")
+        return
+    cleaned = []
+    seen = set(entities.values())
+    for item in additional:
+        if not isinstance(item, dict):
+            connection.send_error(msg["id"], "invalid_entities", "Invalid additional entity")
+            return
+        raw_name = item.get("name", "")
+        raw_entity_id = item.get("entity_id", "")
+        name = raw_name.strip() if isinstance(raw_name, str) else ""
+        entity_id = raw_entity_id.strip() if isinstance(raw_entity_id, str) else ""
+        if (not name or len(name) > 80
+                or not ENTITY_ID_RE.fullmatch(entity_id) or entity_id in seen):
+            connection.send_error(msg["id"], "invalid_entities", "Additional entities must have unique names and valid entity IDs")
+            return
+        seen.add(entity_id)
+        cleaned.append({"name": name, "entity_id": entity_id})
+    previous_entities = dict(mgr["data"].get("entities", {}))
+    previous_additional = list(mgr["data"].get("additional_entities", []))
+    mgr["data"]["entities"] = dict(entities)
+    mgr["data"]["additional_entities"] = cleaned
+    try:
+        await mgr["store"].async_save(mgr["data"])
+    except Exception:
+        mgr["data"]["entities"] = previous_entities
+        mgr["data"]["additional_entities"] = previous_additional
+        raise
+    connection.send_result(msg["id"], {"saved": True})
 
 
 @websocket_api.websocket_command({
@@ -430,7 +508,9 @@ async def ws_time_off_import(hass, connection, msg):
     if mgr["data"].get("time_off_migrated", False):
         connection.send_error(msg["id"], "already_imported", "Legacy vacation calendar already imported")
         return
-    cal = "calendar.kiln_employee_time_off"
+    cal = mgr["data"].get("entities", {}).get(
+        "time_off_calendar", DEFAULT_ENTITIES["time_off_calendar"]
+    )
     from homeassistant.util import dt as dt_util
     local_now = dt_util.as_local(dt_util.utcnow())
     beginning = datetime.combine(local_now.date() - timedelta(days=1), time.min, tzinfo=local_now.tzinfo)
@@ -504,6 +584,6 @@ def register(hass):
     # Register handlers once; data is resolved at call time.
     if hass.data.get(WS_REGISTERED_KEY):
         return
-    for func in (ws_list, ws_save, ws_delete, ws_test_notification, ws_save_alert_settings, ws_time_off_save, ws_time_off_delete, ws_time_off_import):
+    for func in (ws_list, ws_save, ws_delete, ws_test_notification, ws_save_entities, ws_save_alert_settings, ws_time_off_save, ws_time_off_delete, ws_time_off_import):
         websocket_api.async_register_command(hass, func)
     hass.data[WS_REGISTERED_KEY] = True

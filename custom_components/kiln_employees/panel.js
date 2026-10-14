@@ -12,6 +12,9 @@ class KilnEmployeesPanel extends HTMLElement {
     this.history = [];
     this.timeOff = [];
     this.timeOffMigrated = false;
+    this.entities = {};
+    this.additionalEntities = [];
+    this.entityRows = [];
     this.timeOffSelected = '';
     this.editTimeOff = null;
     this.showPastTimeOff = false;
@@ -68,6 +71,8 @@ class KilnEmployeesPanel extends HTMLElement {
       this.history = response.history || [];
       this.timeOff = response.time_off || [];
       this.timeOffMigrated = Boolean(response.time_off_migrated);
+      this.entities = response.entities || {};
+      this.additionalEntities = response.additional_entities || [];
       if (!this.data.some(employee => employee.id === this.timeOffSelected)) {
         this.timeOffSelected = this.data[0]?.id || '';
       }
@@ -174,6 +179,9 @@ class KilnEmployeesPanel extends HTMLElement {
       input,select{background:var(--card-background-color,#fff);color:var(--primary-text-color);border:1px solid var(--divider-color,#aaa);border-radius:8px;padding:11px;font:inherit;box-sizing:border-box;width:100%}
       input[type=checkbox]{width:20px;height:20px;accent-color:var(--primary-color,#1976d2)}
       .check{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px}
+      .entity-row{border-bottom:1px solid var(--divider-color);padding:4px 0 10px;margin-bottom:8px}
+      .entity-status{font-size:13px;margin-top:4px}.entity-status.ok{color:var(--success-color,#2e9d62)}
+      .entity-add-row{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:10px;margin:10px 0}
       .days{display:flex;flex-wrap:wrap;gap:8px}.days label{border:1px solid var(--divider-color,#aaa);border-radius:8px;padding:8px;display:flex;gap:5px;align-items:center;font-size:13px}.days input{width:16px}
       button{background:var(--primary-color,#1976d2);border:0;border-radius:9px;color:white;padding:11px 16px;cursor:pointer;font-size:14px}
       button.secondary,.tabs button{background:var(--secondary-background-color,#777);color:var(--primary-text-color)}
@@ -235,6 +243,7 @@ class KilnEmployeesPanel extends HTMLElement {
     }
     this.renderTabs(shell);
     if (this.tab === 'alerts') this.renderManageAlerts(shell);
+    else if (this.tab === 'entities') this.renderEntities(shell);
     else if (this.tab === 'timeoff') this.renderTimeOff(shell);
     else if (this.tab === 'history') this.renderHistory(shell);
     else this.renderEmployees(shell);
@@ -248,7 +257,7 @@ class KilnEmployeesPanel extends HTMLElement {
     top.append(refresh);
     shell.append(top);
     const bar = this.el('nav', { class: 'tabs' });
-    for (const [id, label] of [['employees', 'Employees'], ['timeoff', 'Time Off'], ['alerts', 'Manage Alerts'], ['history', 'Notification History']]) {
+    for (const [id, label] of [['employees', 'Employees'], ['timeoff', 'Time Off'], ['alerts', 'Manage Alerts'], ['entities', 'Entities'], ['history', 'Notification History']]) {
       const button = this.el('button', { text: label, class: this.tab === id ? 'active' : '' });
       button.type = 'button';
       button.onclick = () => { this.tab = id; this.notice = ''; this.error = ''; this.render(); };
@@ -539,6 +548,72 @@ class KilnEmployeesPanel extends HTMLElement {
       if (event.key === 'Escape') { event.preventDefault(); close(); start.focus(); }
     });
     updateFocused();
+  }
+
+  renderEntities(shell) {
+    shell.append(this.el('h2', { text: 'Entity Settings' }));
+    shell.append(this.el('p', { class: 'muted', text: 'These Home Assistant entities provide the signals used by the integration. Changes take effect without editing code; entity IDs are checked before saving.' }));
+    const form = this.el('form', { class: 'card' });
+    shell.append(form);
+    form.append(this.el('h3', { text: 'Active Integration Entities' }));
+    const fixedInputs = {};
+    for (const [key, info] of Object.entries(this.entities)) {
+      const wrap = this.el('div', { class: 'entity-row' });
+      const field = this.field(wrap, info.label, key, 'text', info.entity_id);
+      field.required = true;
+      fixedInputs[key] = field;
+      const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
+      wrap.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }));
+      form.append(wrap);
+    }
+    form.append(this.el('hr'));
+    form.append(this.el('h3', { text: 'Additional Entities' }));
+    form.append(this.el('p', { class: 'muted', text: 'Add future alarm, kiln, or status entities here. Saving an entity does not enable an alert by itself; its behavior will be configured when that feature is added.' }));
+    const additionalBox = this.el('div');
+    form.append(additionalBox);
+    const renderAdditional = () => {
+      additionalBox.replaceChildren();
+      this.entityRows.forEach((item, index) => {
+        const row = this.el('div', { class: 'entity-add-row' });
+        const name = this.field(row, 'Name', 'name', 'text', item.name || '');
+        const entity = this.field(row, 'Entity ID', 'entity_id', 'text', item.entity_id || '');
+        const remove = this.el('button', { text: 'Remove', class: 'secondary' });
+        remove.type = 'button';
+        remove.onclick = () => { this.entityRows.splice(index, 1); renderAdditional(); };
+        row.append(remove);
+        item.inputs = { name, entity };
+        additionalBox.append(row);
+      });
+    };
+    this.entityRows = this.additionalEntities.map(item => ({ name: item.name, entity_id: item.entity_id }));
+    renderAdditional();
+    const add = this.el('button', { text: '+ Add Entity', class: 'secondary' });
+    add.type = 'button';
+    add.onclick = () => { this.entityRows.push({ name: '', entity_id: '' }); renderAdditional(); };
+    form.append(add);
+    const save = this.el('button', { text: 'Save Entity Settings' });
+    save.type = 'submit';
+    const actions = this.el('div', { class: 'actions' });
+    actions.append(save);
+    form.append(actions);
+    form.onsubmit = async event => {
+      event.preventDefault();
+      if (this.busy) return;
+      const entities = Object.fromEntries(Object.entries(fixedInputs).map(([key, input]) => [key, input.value.trim()]));
+      const additionalEntities = this.entityRows.map(item => ({ name: item.inputs.name.value.trim(), entity_id: item.inputs.entity.value.trim() }));
+      this.busy = true;
+      save.disabled = true;
+      try {
+        await this.call('save_entities', { entities, additional_entities: additionalEntities });
+        this.notice = 'Entity settings saved.';
+        await this.load();
+      } catch (error) {
+        this.error = String(error.message || error);
+        this.render();
+      } finally {
+        this.busy = false;
+      }
+    };
   }
 
   renderManageAlerts(shell) {

@@ -1,5 +1,13 @@
 # Kiln Employee Manager changelog
 
+## 1.9.0
+
+- Added an admin-only Entity Settings page with live existence/state checks.
+- Moved the calendar, PLC communication, kiln status, and completion entity
+  mappings into saved settings.
+- Added support for storing additional named entities for future kiln alarms
+  and additional kiln signals.
+
 ## 1.8.0
 
 - Removed global enable switches for PLC communication and Kiln #3 paused

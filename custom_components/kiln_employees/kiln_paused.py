@@ -4,14 +4,16 @@ import logging
 from datetime import timedelta
 
 from homeassistant.core import callback
-from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.core import EVENT_STATE_CHANGED
+from homeassistant.helpers.event import async_track_event, async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from .binary_sensor import employee_eligible
+from .const import DEFAULT_ENTITIES
 from .notifications import send_mobile
 
 _LOGGER = logging.getLogger(__name__)
-ENTITY = "sensor.kiln_3_status"
+ENTITY = DEFAULT_ENTITIES["kiln_3_status"]
 PAUSED_STATE = "Paused"
 DEFAULT_PAUSED_SECONDS = 300
 MAX_PAUSED_SECONDS = 3600
@@ -78,7 +80,8 @@ async def async_setup_paused(hass, entry, manager):
             return
         state["busy"] = True
         try:
-            reading = hass.states.get(ENTITY)
+            entity = manager["data"].get("entities", {}).get("kiln_3_status", ENTITY)
+            reading = hass.states.get(entity)
             current = reading.state if reading else "unknown"
             now = dt_util.utcnow()
             if current == PAUSED_STATE:
@@ -97,6 +100,9 @@ async def async_setup_paused(hass, entry, manager):
 
     @callback
     def on_status_change(event):
+        entity = manager["data"].get("entities", {}).get("kiln_3_status", ENTITY)
+        if event.data.get("entity_id") != entity:
+            return
         old_state = event.data.get("old_state")
         new_state = event.data.get("new_state")
         if new_state is None or (old_state and old_state.state == new_state.state):
@@ -107,7 +113,7 @@ async def async_setup_paused(hass, entry, manager):
     # it does not immediately send a notification after a restart.
     await check()
     entry.async_on_unload(
-        async_track_state_change_event(hass, [ENTITY], on_status_change)
+        async_track_event(hass, EVENT_STATE_CHANGED, on_status_change)
     )
     entry.async_on_unload(
         async_track_time_interval(hass, check, timedelta(seconds=5))
