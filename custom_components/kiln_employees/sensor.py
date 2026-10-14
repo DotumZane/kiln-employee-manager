@@ -30,7 +30,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 registered = registry.async_get_entity_id('sensor', DOMAIN, old.unique_id)
                 if registered:
                     registry.async_remove(registered)
-            hass.async_create_task(remove())
+            hass.add_job(remove())
         for entity in entities.values():
             if entity.hass is not None:
                 entity.async_write_ha_state()

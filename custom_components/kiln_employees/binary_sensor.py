@@ -113,15 +113,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     manager["vacation_ok"] = bool(manager["data"].get("time_off_migrated", False))
     # Legacy calendar remains authoritative until a successful explicit migration.
     entities = {}
-    removal_tasks = set()
     refresh_running = False
     calendar_failures = 0
     CALENDAR_RETRY_ATTEMPTS = 3
     CALENDAR_FAILURE_LIMIT = 4
 
+    def schedule(coro):
+        """Schedule safely even when a data listener is called from another thread."""
+        hass.add_job(coro)
+
     @callback
     def sync_employees():
-        nonlocal removal_tasks
         ids = {e.get("id") for e in manager["data"].get("employees", []) if e.get("id")}
         new = []
         for employee_id in ids:
@@ -147,9 +149,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 elif entity_id and registry.async_get(entity_id):
                     registry.async_remove(entity_id)
 
-            task = hass.async_create_task(remove_sensor())
-            removal_tasks.add(task)
-            task.add_done_callback(removal_tasks.discard)
+            schedule(remove_sensor())
         for sensor in entities.values():
             if sensor.hass is not None:
                 sensor.async_write_ha_state()
@@ -246,13 +246,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         if manager["data"].get("time_off_migrated", False):
             sync_employees()
         else:
-            hass.async_create_task(refresh_calendar())
+            schedule(refresh_calendar())
 
     @callback
     def on_employee_change():
         sync_employees()
-        hass.async_create_task(sync_employee_selector())
-        hass.async_create_task(refresh_calendar())
+        schedule(sync_employee_selector())
+        schedule(refresh_calendar())
 
     sync_employees()
     manager["listeners"].add(on_employee_change)
@@ -263,12 +263,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entry.async_on_unload(
         async_call_later(
             hass, 10,
-            lambda _now: hass.async_create_task(refresh_calendar()),
+            lambda _now: schedule(refresh_calendar()),
         )
     )
     entry.async_on_unload(lambda: manager["listeners"].discard(on_employee_change))
-    hass.async_create_task(refresh_calendar())
-    hass.async_create_task(sync_employee_selector())
+    await refresh_calendar()
+    await sync_employee_selector()
 
 
 class KilnEmployeeSMSEligible(BinarySensorEntity):

@@ -1,5 +1,11 @@
 # Kiln Employee Manager changelog
 
+## 1.9.3
+
+- Prevented duplicate frontend custom-element registration.
+- Made background task scheduling safe for Home Assistant callbacks invoked
+  outside the event loop.
+
 ## 1.9.2
 
 - Made Entity Settings read-only by default with an explicit Edit Entities

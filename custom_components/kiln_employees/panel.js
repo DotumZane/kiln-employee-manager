@@ -907,4 +907,6 @@ class KilnEmployeesPanel extends HTMLElement {
   }
 }
 
-customElements.define('kiln-employees-panel', KilnEmployeesPanel);
+if (!customElements.get('kiln-employees-panel')) {
+  customElements.define('kiln-employees-panel', KilnEmployeesPanel);
+}
