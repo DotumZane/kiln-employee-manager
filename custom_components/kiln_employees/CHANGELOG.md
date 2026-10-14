@@ -1,5 +1,11 @@
 # Kiln Employee Manager changelog
 
+## 1.10.0
+
+- Removed the unused Kiln #3 completion-event entity requirement.
+- Completion notifications now use `sensor.kiln_3_status` becoming exactly
+  `Stopped / Idle`.
+
 ## 1.9.4
 
 - Bumped the panel cache version so the duplicate-registration fix is loaded

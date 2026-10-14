@@ -1,4 +1,4 @@
-"""Kiln completion notifications driven by an explicit Node-RED event token."""
+"""Kiln completion notifications driven by the Node-RED status entity."""
 
 import logging
 from datetime import datetime
@@ -13,6 +13,7 @@ from .notifications import send_mobile
 _LOGGER = logging.getLogger(__name__)
 
 INVALID_STATES = {"", "unknown", "unavailable", "none", "null"}
+STOPPED_STATE = "Stopped / Idle"
 MAX_PROCESSED_IDS = 100
 
 
@@ -30,7 +31,7 @@ def _is_assigned(employee: dict) -> bool:
 async def async_setup_completion(
     hass: HomeAssistant, entry, manager: dict
 ) -> None:
-    """Listen for Node-RED's explicit, changing completion event token."""
+    """Listen for Node-RED's exact Stopped / Idle status transition."""
     data = manager["data"]
     state = manager["completion_monitor"] = {
         "processed_ids": list(data.get("kiln_3_processed_completion_events", [])),
@@ -101,7 +102,7 @@ async def async_setup_completion(
     @callback
     def on_completion_event(event) -> None:
         entity = manager["data"].get("entities", {}).get(
-            "kiln_3_completion", COMPLETION_ENTITY
+            "kiln_3_status", COMPLETION_ENTITY
         )
         if event.data.get("entity_id") != entity:
             return
@@ -109,26 +110,18 @@ async def async_setup_completion(
         new_state = event.data.get("new_state")
         if new_state is None or old_state and old_state.state == new_state.state:
             return
-        completion_id = _valid_completion_id(new_state.state)
-        if completion_id is None:
+        if new_state.state != STOPPED_STATE:
             return
+        completion_id = new_state.last_changed.isoformat()
         completed_at = new_state.last_changed
         hass.async_create_task(process(completion_id, completed_at))
 
     completion_entity = manager["data"].get("entities", {}).get(
-        "kiln_3_completion", COMPLETION_ENTITY
+        "kiln_3_status", COMPLETION_ENTITY
     )
     current = hass.states.get(completion_entity)
-    current_id = _valid_completion_id(current.state if current else None)
-    if current_id and current_id not in state["processed_ids"]:
-        if state["processed_ids"]:
-            # A new persisted ID may represent a completion while HA was down.
-            await process(current_id, current.last_changed)
-        else:
-            # First startup establishes a baseline and never announces an old
-            # completion that occurred before this integration was installed.
-            state["processed_ids"].append(current_id)
-            await persist_processed_ids()
+    # Establish a baseline at startup; do not announce a kiln that was already
+    # stopped before Home Assistant or the integration loaded.
 
     entry.async_on_unload(
         hass.bus.async_listen(EVENT_STATE_CHANGED, on_completion_event)

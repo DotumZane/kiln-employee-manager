@@ -15,15 +15,15 @@ reloaded through the Home Assistant integration reload control.
 
 ## Current version
 
-The current release is **1.9.4**. See
+The current release is **1.10.0**. See
 [`custom_components/kiln_employees/CHANGELOG.md`](custom_components/kiln_employees/CHANGELOG.md)
 for release notes.
 
-## Node-RED completion signal
+## Node-RED kiln status signal
 
-Node-RED remains responsible for deciding when a charge is complete. It must
-publish a new changing value to `sensor.kiln_3_completion_event` for each
-completed charge. The value is used only as an internal deduplication token and
-is not included in the employee notification. The integration sends:
+Node-RED remains responsible for deciding kiln status. The integration uses
+`sensor.kiln_3_status` and sends the stop notification when its exact state
+becomes `Stopped / Idle`. The value is not included in the employee
+notification. The integration sends:
 
 > Kiln #3 has stopped. Check whether the drying schedule completed or the kiln was manually stopped.

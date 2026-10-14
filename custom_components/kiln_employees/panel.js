@@ -1,4 +1,4 @@
-// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.9.2).
+// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.10.0).
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 class KilnEmployeesPanel extends HTMLElement {
@@ -274,7 +274,7 @@ class KilnEmployeesPanel extends HTMLElement {
     add.onclick = () => { this.current = null; this.mode = 'edit'; this.notice = ''; this.render(); };
     top.append(add);
     shell.append(top);
-    shell.append(this.el('p', { class: 'muted', text: `${this.data.length} of 10 employees. Status follows the saved work schedule, not physical attendance. Kiln #3 stop notifications are driven by the Node-RED completion event; PLC communication alerts are managed under Manage Alerts.` }));
+    shell.append(this.el('p', { class: 'muted', text: `${this.data.length} of 10 employees. Status follows the saved work schedule, not physical attendance. Kiln #3 stop notifications are driven by the Node-RED status entity; PLC communication alerts are managed under Manage Alerts.` }));
     if (!this.data.length) shell.append(this.el('div', { class: 'card', text: 'No employees added yet.' }));
     for (const employee of this.data) {
       const card = this.el('div', { class: 'card employee' });
@@ -653,7 +653,7 @@ class KilnEmployeesPanel extends HTMLElement {
 
   renderManageAlerts(shell) {
     shell.append(this.el('h2', { text: 'Manage Alerts' }));
-    shell.append(this.el('div', { class: 'note', text: 'These delays apply globally, not per employee. Kiln #3 stop notifications use the Node-RED completion event. Paused alerts use sensor.kiln_3_status with the exact state Paused.' }));
+    shell.append(this.el('div', { class: 'note', text: 'These delays apply globally, not per employee. Kiln #3 stop notifications use sensor.kiln_3_status with the exact state Stopped / Idle. Paused alerts use the exact state Paused.' }));
     const form = this.el('form', { class: 'card' });
     shell.append(form);
     form.append(this.el('h3', { text: 'Global PLC Communication Delays' }));
