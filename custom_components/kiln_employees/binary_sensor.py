@@ -1,4 +1,5 @@
 """Live employee SMS eligibility; fail closed if shared vacation calendar cannot be read."""
+import asyncio
 import logging
 from datetime import date, datetime, timedelta, time
 
@@ -111,6 +112,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entities = {}
     removal_tasks = set()
     refresh_running = False
+    calendar_failures = 0
+    CALENDAR_RETRY_ATTEMPTS = 3
+    CALENDAR_FAILURE_LIMIT = 4
 
     @callback
     def sync_employees():
@@ -165,7 +169,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             _LOGGER.warning("Could not update employee vacation dropdown: %s", exc)
 
     async def refresh_calendar():
-        nonlocal refresh_running
+        nonlocal refresh_running, calendar_failures
         if manager["data"].get("time_off_migrated", False):
             manager["vacation_ok"] = True
             manager["vacation_events"] = []
@@ -178,7 +182,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             # integration is set up during Home Assistant startup. Keep the
             # check fail-closed, but let the scheduled retry recover without
             # requiring a restart.
-            manager["vacation_ok"] = False
+            calendar_failures += 1
+            if calendar_failures >= CALENDAR_FAILURE_LIMIT:
+                manager["vacation_ok"] = False
             _LOGGER.debug("Calendar get_events action is not registered yet; retrying")
             sync_employees()
             return
@@ -186,31 +192,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         local_now = dt_util.as_local(dt_util.utcnow())
         start = datetime.combine(local_now.date() - timedelta(days=1), time.min, tzinfo=local_now.tzinfo)
         end = start + timedelta(days=4)
+        last_error = None
         try:
             # Explicit response ensures overlaps and deletions are checked; a single
             # calendar entity's on/off state is insufficient for multiple employees.
-            response = await hass.services.async_call(
-                "calendar", "get_events",
-                {"start_date_time": start.isoformat(),
-                 "end_date_time": end.isoformat()},
-                target={"entity_id": [CALENDAR]},
-                blocking=True, return_response=True,
-            )
-            payload = response.get(CALENDAR, {}) if isinstance(response, dict) else {}
-            events = payload.get("events")
-            if not isinstance(events, list):
-                raise ValueError("Missing calendar event list")
-            manager["vacation_events"] = events
-            manager["vacation_ok"] = True
-        except Exception as exc:
-            manager["vacation_ok"] = False  # fail CLOSED if calendar is broken
-            calendar_state = hass.states.get(CALENDAR)
-            _LOGGER.warning(
-                "Kiln vacation check unavailable for %s (state=%s): %s",
-                CALENDAR,
-                calendar_state.state if calendar_state else "missing",
-                exc,
-            )
+            for attempt in range(CALENDAR_RETRY_ATTEMPTS):
+                try:
+                    response = await hass.services.async_call(
+                        "calendar", "get_events",
+                        {"start_date_time": start.isoformat(),
+                         "end_date_time": end.isoformat()},
+                        target={"entity_id": [CALENDAR]},
+                        blocking=True, return_response=True,
+                    )
+                    payload = response.get(CALENDAR, {}) if isinstance(response, dict) else {}
+                    events = payload.get("events")
+                    if not isinstance(events, list):
+                        raise ValueError("Missing calendar event list")
+                    manager["vacation_events"] = events
+                    manager["vacation_ok"] = True
+                    calendar_failures = 0
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    last_error = exc
+                    if attempt < CALENDAR_RETRY_ATTEMPTS - 1:
+                        await asyncio.sleep(1)
+            else:
+                calendar_failures += 1
+                # Do not turn a temporary service hiccup into a false alarm. The
+                # last successful event set remains authoritative until repeated
+                # failures exceed the limit.
+                if calendar_failures >= CALENDAR_FAILURE_LIMIT:
+                    manager["vacation_ok"] = False
+                    calendar_state = hass.states.get(CALENDAR)
+                    _LOGGER.warning(
+                        "Kiln vacation check unavailable for %s after %s failed checks "
+                        "(state=%s): %s",
+                        CALENDAR,
+                        calendar_failures,
+                        calendar_state.state if calendar_state else "missing",
+                        last_error,
+                    )
         finally:
             refresh_running = False
             sync_employees()
@@ -230,7 +252,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     sync_employees()
     manager["listeners"].add(on_employee_change)
-    cancel_interval = async_track_time_interval(hass, tick, timedelta(minutes=1))
+    cancel_interval = async_track_time_interval(hass, tick, timedelta(seconds=15))
     entry.async_on_unload(cancel_interval)
     # Retry shortly after startup in case the calendar integration registers
     # its action after this integration's first setup pass.

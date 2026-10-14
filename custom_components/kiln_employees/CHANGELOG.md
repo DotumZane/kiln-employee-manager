@@ -1,5 +1,11 @@
 # Kiln Employee Manager changelog
 
+## 1.7.1
+
+- Retries temporary calendar read failures before changing employee status.
+- Refreshes the calendar check every 15 seconds and retains the last successful
+  event set during brief service interruptions.
+
 ## 1.7.0
 
 - Added configurable Kiln #3 paused notifications based on
