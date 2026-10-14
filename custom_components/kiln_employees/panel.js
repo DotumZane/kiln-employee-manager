@@ -1,4 +1,4 @@
-// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.7.1).
+// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.8.0).
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 class KilnEmployeesPanel extends HTMLElement {
@@ -552,16 +552,13 @@ class KilnEmployeesPanel extends HTMLElement {
     const lost = this.numberField(grid, 'Communication Lost Delay (seconds)', 'lost', this.settings.plc_lost_delay_seconds ?? 30, 0, 3600);
     const restored = this.numberField(grid, 'Communication Restored Delay (seconds)', 'restored', this.settings.plc_restored_delay_seconds ?? 15, 0, 3600);
     form.append(this.el('p', { class: 'muted', text: 'Whole seconds (0–3600). A value of 0 means the next monitor check, not literally instantaneous. The existing PLC heartbeat detector has its own delay before Home Assistant reports offline.' }));
-    const enableLost = this.field(form, 'Enable PLC Communication Lost Alerts', 'plc_lost_enabled', 'checkbox', this.settings.plc_lost_enabled ?? true);
-    const enableRestored = this.field(form, 'Enable PLC Communication Restored Alerts', 'plc_restored_enabled', 'checkbox', this.settings.plc_restored_enabled ?? true);
     form.append(this.el('hr'));
     form.append(this.el('h3', { text: 'Kiln #3 Paused Alert' }));
     const paused = this.numberField(form, 'Send after paused for (seconds)', 'paused', this.settings.kiln_paused_delay_seconds ?? 300, 0, 3600);
     form.append(this.el('p', { class: 'muted', text: 'The timer starts when sensor.kiln_3_status changes to exactly Paused and resets when the status changes. A value of 0 sends on the next monitor check.' }));
-    const enablePaused = this.field(form, 'Enable Kiln Paused Alerts', 'kiln_paused_enabled', 'checkbox', this.settings.kiln_paused_enabled ?? false);
     form.append(this.el('hr'));
     form.append(this.el('h3', { text: 'Kiln #3 — Alert Recipients' }));
-    form.append(this.el('p', { class: 'muted', text: 'Choose which employees receive each alert. Their assigned kiln, shift/24/7, vacation, manual Time Off, and notification-enabled setting are still respected. Only App notifications send currently; SMS is not configured.' }));
+    form.append(this.el('p', { class: 'muted', text: 'Communication and paused alerts are always active. Choose which employees receive each alert. Their assigned kiln, shift/24/7, vacation, manual Time Off, and notification-enabled setting are still respected. Only App notifications send currently; SMS is not configured.' }));
     const table = this.el('table', { class: 'recipients' });
     const header = this.el('tr');
     for (const label of ['Employee', 'Communication Lost', 'Communication Restored', 'Kiln Paused']) header.append(this.el('th', { text: label }));
@@ -612,10 +609,7 @@ class KilnEmployeesPanel extends HTMLElement {
         await this.call('save_alert_settings', {
           plc_lost_delay_seconds: lostSeconds,
           plc_restored_delay_seconds: restoredSeconds,
-          plc_lost_enabled: enableLost.checked,
-          plc_restored_enabled: enableRestored.checked,
           kiln_paused_delay_seconds: pausedSeconds,
-          kiln_paused_enabled: enablePaused.checked,
           recipients: recipientRows.map(row => ({ employee_id: row.employee_id, lost: row.lost.checked, restored: row.restored.checked, paused: row.paused.checked })),
         });
         this.notice = 'Alert settings and recipients saved.';

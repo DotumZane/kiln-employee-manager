@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.8.0
+
+- Removed global enable switches for PLC communication and Kiln #3 paused
+  alerts; recipient selection now controls delivery.
+
 ## 1.7.1
 
 - Retries temporary calendar read failures before changing employee status.

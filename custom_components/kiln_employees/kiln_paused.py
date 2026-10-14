@@ -36,9 +36,6 @@ async def async_setup_paused(hass, entry, manager):
     }
 
     async def emit():
-        settings = manager["data"].get("settings", {})
-        if settings.get("kiln_paused_enabled", False) is not True:
-            return
         seconds = pause_seconds(manager)
         attempted = []
         local_now = dt_util.as_local(dt_util.utcnow())
@@ -88,10 +85,7 @@ async def async_setup_paused(hass, entry, manager):
                 if state["since"] is None:
                     state["since"] = now
                     state["notified"] = False
-                enabled = manager["data"].get("settings", {}).get(
-                    "kiln_paused_enabled", False
-                ) is True
-                if (enabled and not state["notified"] and
+                if (not state["notified"] and
                         (now - state["since"]).total_seconds() >= pause_seconds(manager)):
                     state["notified"] = True
                     await emit()

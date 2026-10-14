@@ -48,10 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data.setdefault("settings", {})
     data["settings"].setdefault("plc_lost_delay_seconds", 30)
     data["settings"].setdefault("plc_restored_delay_seconds", 15)
-    data["settings"].setdefault("plc_lost_enabled", True)
-    data["settings"].setdefault("plc_restored_enabled", True)
     data["settings"].setdefault("kiln_paused_delay_seconds", 300)
-    data["settings"].setdefault("kiln_paused_enabled", False)
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "store": store,

@@ -249,10 +249,7 @@ async def ws_test_notification(hass, connection, msg):
     vol.Required("type"): "kiln_employees/save_alert_settings",
     vol.Required("plc_lost_delay_seconds"): int,
     vol.Required("plc_restored_delay_seconds"): int,
-    vol.Required("plc_lost_enabled"): bool,
-    vol.Required("plc_restored_enabled"): bool,
     vol.Required("kiln_paused_delay_seconds"): int,
-    vol.Required("kiln_paused_enabled"): bool,
     vol.Required("recipients"): list,
 })
 @websocket_api.require_admin
@@ -300,10 +297,7 @@ async def ws_save_alert_settings(hass, connection, msg):
     settings.update({
         "plc_lost_delay_seconds": lost,
         "plc_restored_delay_seconds": restored,
-        "plc_lost_enabled": msg["plc_lost_enabled"],
-        "plc_restored_enabled": msg["plc_restored_enabled"],
         "kiln_paused_delay_seconds": paused,
-        "kiln_paused_enabled": msg["kiln_paused_enabled"],
     })
     for employee in employees:
         row = selections[employee["id"]]

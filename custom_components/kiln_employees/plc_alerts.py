@@ -43,10 +43,6 @@ async def async_setup_alerts(hass, entry, manager):
     manager["plc_monitor"] = state
 
     async def emit(kind, title, body):
-        settings = manager["data"].get("settings", {})
-        enable_key = "plc_lost_enabled" if kind == "alert_plc_lost" else "plc_restored_enabled"
-        if settings.get(enable_key, True) is not True:
-            return
         # Apply fresh employee preferences at time of emission.
         attempted = []
         for employee in list(manager["data"].get("employees", [])):
