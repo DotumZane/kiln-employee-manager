@@ -1,4 +1,4 @@
-// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.6.4).
+// Kiln Employee Manager — Home Assistant admin-only sidebar panel (v1.6.5).
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 class KilnEmployeesPanel extends HTMLElement {

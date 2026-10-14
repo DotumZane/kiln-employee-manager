@@ -1,5 +1,11 @@
 # Kiln Employee Manager changelog
 
+## 1.6.5
+
+- Reverted automatic migration when the legacy calendar is absent; this avoids
+  silently ignoring a calendar that is present under a different entity ID.
+- Added the calendar entity ID and current state to the diagnostic warning.
+
 ## 1.6.4
 
 - Automatically completes the legacy vacation-calendar migration when the old
