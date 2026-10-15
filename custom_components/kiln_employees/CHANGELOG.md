@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.19.1
+
+- Keep live PLC data available when saving MQTT and PLC signal settings.
+- Reconfigure the Kiln 3 monitor in place instead of briefly clearing its live state.
+
 ## 1.19.0
 
 - Made Kiln 3 MQTT and PLC tag mappings configurable from the Kiln 3 page.

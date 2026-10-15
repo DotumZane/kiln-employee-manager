@@ -73,9 +73,10 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
     """Subscribe to configured Kiln 3 raw data and publish its legacy topics."""
     await mqtt.async_wait_for_mqtt_client(hass)
     config = manager["data"].get("settings", {}).get("kiln_configs", {}).get("3", {})
-    raw_topic = str(config.get("raw_topic") or KILN_3_RAW_MQTT_TOPIC)
+    runtime_config = dict(config)
+    raw_topic = str(runtime_config.get("raw_topic") or KILN_3_RAW_MQTT_TOPIC)
     try:
-        heartbeat_timeout = max(1, min(3600, int(config.get("heartbeat_timeout_seconds", 5))))
+        heartbeat_timeout = max(1, min(3600, int(runtime_config.get("heartbeat_timeout_seconds", 5))))
     except (TypeError, ValueError):
         heartbeat_timeout = 5
     state = manager["kiln_monitor"] = {
@@ -83,7 +84,7 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
         "data_valid": False, "raw": {}, "last_received": None,
         "last_clock_received": None, "last_status": "Unknown",
         "last_published_connected": None, "topic": raw_topic,
-        "heartbeat_timeout_seconds": heartbeat_timeout, "tags": _tags(config),
+        "heartbeat_timeout_seconds": heartbeat_timeout, "tags": _tags(runtime_config),
     }
 
     async def publish(topic: str, payload) -> None:
@@ -132,7 +133,7 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
             return
         state["raw"] = raw
         state["last_received"] = dt_util.utcnow().isoformat()
-        incoming = _normalize(raw, config)
+        incoming = _normalize(raw, runtime_config)
         clock = incoming.get("clock")
         if type(clock) is int and clock != state["last_clock"]:
             state["last_clock"] = clock
@@ -147,6 +148,33 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
         await publish_current()
 
     unsubscribe = await mqtt.async_subscribe(hass, raw_topic, on_message, qos=0)
-    entry.async_on_unload(unsubscribe)
+
+    async def reconfigure(new_config: dict) -> None:
+        """Apply saved setup without discarding the current PLC reading."""
+        nonlocal runtime_config, raw_topic, heartbeat_timeout, unsubscribe
+        new_topic = str(new_config.get("raw_topic") or KILN_3_RAW_MQTT_TOPIC)
+        try:
+            new_timeout = max(1, min(3600, int(new_config.get("heartbeat_timeout_seconds", 5))))
+        except (TypeError, ValueError):
+            new_timeout = 5
+        if new_topic != raw_topic:
+            unsubscribe()
+            unsubscribe = await mqtt.async_subscribe(hass, new_topic, on_message, qos=0)
+        runtime_config = dict(new_config)
+        raw_topic = new_topic
+        heartbeat_timeout = new_timeout
+        state["topic"] = raw_topic
+        state["heartbeat_timeout_seconds"] = heartbeat_timeout
+        state["tags"] = _tags(runtime_config)
+        if state["raw"]:
+            values = _validated(_normalize(state["raw"], runtime_config))
+            if values is not None:
+                state["values"] = values
+                state["data_valid"] = True
+        await publish_current()
+
+    manager["kiln_monitor_reconfigure"] = reconfigure
+    entry.async_on_unload(lambda: unsubscribe())
+    entry.async_on_unload(lambda: manager.pop("kiln_monitor_reconfigure", None))
     entry.async_on_unload(async_track_time_interval(hass, on_tick, timedelta(seconds=1)))
     await publish_current()

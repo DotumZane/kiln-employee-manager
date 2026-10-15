@@ -472,11 +472,10 @@ async def ws_save_kiln_config(hass, connection, msg):
         raise
     for listener in tuple(mgr.get("listeners", ())):
         listener()
-    await hass.config_entries.async_reload(next(
-        entry_id for entry_id, value in hass.data.get(DOMAIN, {}).items()
-        if value is mgr
-    ))
-    connection.send_result(msg["id"], {"saved": True, "reloaded": True})
+    reconfigure = mgr.get("kiln_monitor_reconfigure") if kiln_id == "3" else None
+    if reconfigure is not None:
+        await reconfigure(configs[kiln_id])
+    connection.send_result(msg["id"], {"saved": True, "reconfigured": reconfigure is not None})
 
 
 
