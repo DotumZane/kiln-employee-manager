@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.16.2
+
+- Renamed the save button to make clear it saves the completion rule and the
+  Kiln 3 signal entity assignments together.
+
 ## 1.16.1
 
 - Connected the Kiln 3 signal matrix to completion, pause, and communication

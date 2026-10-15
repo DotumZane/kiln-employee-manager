@@ -961,7 +961,7 @@ class KilnEmployeesPanel extends HTMLElement {
     completionRule.onchange = updateRuleHelp;
     updateRuleHelp();
     completionForm.append(ruleHelp);
-    const saveRule = this.el('button', { text: 'Save Completion Rule' });
+    const saveRule = this.el('button', { text: 'Save Kiln 3 Settings' });
     saveRule.type = 'submit';
     completionForm.append(this.el('div', { class: 'actions' }), saveRule);
     completionForm.onsubmit = async event => {
