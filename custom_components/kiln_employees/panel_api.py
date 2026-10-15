@@ -6,6 +6,7 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import callback
 from .const import (
+    COMPLETION_RULES,
     DEFAULT_ENTITIES,
     DOMAIN,
     ENTITY_LABELS,
@@ -416,6 +417,38 @@ async def ws_save_alert_settings(hass, connection, msg):
     connection.send_result(msg["id"], {"saved": True})
 
 
+@websocket_api.websocket_command({
+    vol.Required("type"): "kiln_employees/save_kiln_config",
+    vol.Required("kiln_id"): str,
+    vol.Required("completion_rule"): str,
+})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_save_kiln_config(hass, connection, msg):
+    """Save configuration that belongs to one physical kiln."""
+    mgr = _manager(hass)
+    if mgr is None:
+        connection.send_error(msg["id"], "not_ready", "Employee manager is not loaded")
+        return
+    kiln_id = msg["kiln_id"].strip()
+    rule = msg["completion_rule"]
+    if kiln_id not in {"1", "2", "3"} or rule not in COMPLETION_RULES:
+        connection.send_error(msg["id"], "invalid_kiln_config", "Invalid kiln or completion rule")
+        return
+    settings = mgr["data"].setdefault("settings", {})
+    configs = settings.setdefault("kiln_configs", {})
+    previous = dict(configs.get(kiln_id, {}))
+    configs[kiln_id] = {**previous, "completion_rule": rule}
+    try:
+        await mgr["store"].async_save(mgr["data"])
+    except Exception:
+        configs[kiln_id] = previous
+        raise
+    for listener in tuple(mgr.get("listeners", ())):
+        listener()
+    connection.send_result(msg["id"], {"saved": True})
+
+
 
 @websocket_api.websocket_command({
     vol.Required("type"): "kiln_employees/time_off_save",
@@ -606,6 +639,6 @@ def register(hass):
     # Register handlers once; data is resolved at call time.
     if hass.data.get(WS_REGISTERED_KEY):
         return
-    for func in (ws_list, ws_save, ws_delete, ws_test_notification, ws_save_entities, ws_save_alert_settings, ws_time_off_save, ws_time_off_delete, ws_time_off_import):
+    for func in (ws_list, ws_save, ws_delete, ws_test_notification, ws_save_entities, ws_save_alert_settings, ws_save_kiln_config, ws_time_off_save, ws_time_off_delete, ws_time_off_import):
         websocket_api.async_register_command(hass, func)
     hass.data[WS_REGISTERED_KEY] = True

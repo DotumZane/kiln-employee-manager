@@ -1,5 +1,11 @@
 # Kiln Employee Manager changelog
 
+## 1.15.0
+
+- Added per-kiln completion-rule storage and a Kiln 3 editor. The default
+  remains Stopped / Idle, with options for Normal Stop, Kiln Down, or final
+  step conditions.
+
 ## 1.14.0
 
 - Added a functional Kiln 3 monitoring dashboard with live status, PLC health,

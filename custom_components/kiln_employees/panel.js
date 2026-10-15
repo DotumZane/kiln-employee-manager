@@ -883,6 +883,39 @@ class KilnEmployeesPanel extends HTMLElement {
     config.append(this.el('h3', { text: 'Kiln 3 Configuration Sources' }));
     config.append(this.el('p', { class: 'muted', text: 'Use these pages to change the shared settings that currently control Kiln 3.' }));
     config.append(this.el('div', { class: 'muted', text: `Raw MQTT topic: ${data.topic || 'Unknown'}` }));
+    config.append(this.el('hr'));
+    config.append(this.el('h3', { text: 'Completion Rule' }));
+    config.append(this.el('p', { class: 'muted', text: 'Choose which PLC condition allows a Stopped / Idle transition to send the kiln completion notification. The default keeps the current behavior.' }));
+    const kilnConfigs = this.settings.kiln_configs || {};
+    const kilnThreeConfig = kilnConfigs['3'] || {};
+    const completionForm = this.el('form');
+    const completionRule = this.field(completionForm, 'Kiln 3 is complete when', 'completion_rule', 'select', kilnThreeConfig.completion_rule || 'stopped_idle', [
+      ['stopped_idle', 'Stopped / Idle'],
+      ['normal_stop_or_down', 'Normal Stop or Kiln Down'],
+      ['normal_stop', 'Normal Stop'],
+      ['kiln_down', 'Kiln Down'],
+      ['final_step', 'At or past the final step'],
+    ]);
+    const saveRule = this.el('button', { text: 'Save Completion Rule' });
+    saveRule.type = 'submit';
+    completionForm.append(this.el('div', { class: 'actions' }), saveRule);
+    completionForm.onsubmit = async event => {
+      event.preventDefault();
+      if (this.busy) return;
+      this.busy = true;
+      saveRule.disabled = true;
+      try {
+        await this.call('save_kiln_config', { kiln_id: '3', completion_rule: completionRule.value });
+        this.notice = 'Kiln 3 completion rule saved.';
+        await this.load();
+      } catch (error) {
+        this.error = String(error.message || error);
+        this.render();
+      } finally {
+        this.busy = false;
+      }
+    };
+    config.append(completionForm);
     const actions = this.el('div', { class: 'actions' });
     const openPage = (label, tab, kilnTab = this.kilnTab) => {
       const button = this.el('button', { text: label, class: 'secondary' });
