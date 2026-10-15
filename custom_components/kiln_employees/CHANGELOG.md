@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.18.0
+
+- Removed the Kiln 3 signal matrix and restored the previous simpler Kiln 3
+  settings page. Additional-entity kiln assignment remains available.
+
 ## 1.17.0
 
 - Additional Home Assistant entities can now be assigned to Shared, Kiln 1,

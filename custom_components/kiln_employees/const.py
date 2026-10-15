@@ -1,7 +1,7 @@
 """Shared constants for the Kiln Employee Manager integration."""
 
 DOMAIN = "kiln_employees"
-INTEGRATION_VERSION = "1.17.0"
+INTEGRATION_VERSION = "1.18.0"
 
 # Persistent storage schema version.  Keep this separate from the integration
 # version: changing code does not automatically require a data migration.
@@ -10,7 +10,7 @@ STORAGE_KEY = "kiln_employee_manager"
 
 PANEL_URL_PATH = "kiln-employees"
 PANEL_STATIC_URL = "/kiln-employees-static/panel.js"
-PANEL_CACHE_VERSION = 36
+PANEL_CACHE_VERSION = 37
 DEFAULT_ENTITIES = {
     "time_off_calendar": "calendar.kiln_employee_time_off",
     "kiln_3_status": "sensor.kiln_3_status",
@@ -30,15 +30,6 @@ COMPLETION_RULES = {
     "normal_stop": "Normal Stop",
     "kiln_down": "Kiln Down",
     "final_step": "At or past the final step",
-}
-KILN_3_SIGNAL_ENTITY_DEFAULTS = {
-    "status": "sensor.kiln_3_status",
-    "paused": "binary_sensor.kiln_3_paused",
-    "normal_stop": "binary_sensor.kiln_3_normal_stop",
-    "down": "binary_sensor.kiln_3_down",
-    "current_step": "sensor.kiln_3_current_step",
-    "final_step": "sensor.kiln_3_final_step",
-    "communication": "binary_sensor.kiln_3_plc_communication",
 }
 ENTITY_LABELS = {
     "time_off_calendar": "Employee Time-Off Calendar",

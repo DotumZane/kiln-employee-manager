@@ -902,52 +902,6 @@ class KilnEmployeesPanel extends HTMLElement {
     const kilnConfigs = this.settings.kiln_configs || {};
     const kilnThreeConfig = kilnConfigs['3'] || {};
     config.append(this.el('hr'));
-    config.append(this.el('h3', { text: 'Kiln 3 State Signals' }));
-    config.append(this.el('p', { class: 'muted', text: 'Each column is a Home Assistant entity. The rows show the values expected for each kiln state. Change an entity ID here if another kiln uses different entities.' }));
-    const entityDefaults = {
-      status: 'sensor.kiln_3_status',
-      paused: 'binary_sensor.kiln_3_paused',
-      normal_stop: 'binary_sensor.kiln_3_normal_stop',
-      down: 'binary_sensor.kiln_3_down',
-      current_step: 'sensor.kiln_3_current_step',
-      final_step: 'sensor.kiln_3_final_step',
-      communication: 'binary_sensor.kiln_3_plc_communication',
-    };
-    const signalEntities = { ...entityDefaults, ...(kilnThreeConfig.signal_entities || {}) };
-    const signalColumns = [
-      ['status', 'Status entity'], ['paused', 'Paused entity'],
-      ['normal_stop', 'Normal Stop entity'], ['down', 'Kiln Down entity'],
-      ['current_step', 'Current Step entity'], ['final_step', 'Final Step entity'],
-      ['communication', 'Connection entity'],
-    ];
-    const entityInputs = {};
-    const matrixWrap = this.el('div', { class: 'matrix-wrap' });
-    const matrix = this.el('table', { class: 'recipients matrix' });
-    const matrixHeader = this.el('tr');
-    matrixHeader.append(this.el('th', { text: 'Kiln state' }));
-    signalColumns.forEach(([key, label]) => {
-      const th = this.el('th');
-      th.append(this.el('div', { text: label }));
-      const input = this.el('input', { type: 'text', value: signalEntities[key] });
-      input.setAttribute('aria-label', label);
-      entityInputs[key] = input;
-      th.append(input);
-      matrixHeader.append(th);
-    });
-    matrix.append(matrixHeader);
-    [
-      ['Running', ['Running', 'off', 'Any', 'Any', 'Any', 'Any', 'on']],
-      ['Paused', ['Paused', 'on', 'Any', 'Any', 'Any', 'Any', 'on']],
-      ['Stopped / Idle', ['Stopped / Idle', 'off', 'Any', 'Any', 'Any', 'Any', 'on']],
-    ].forEach(([state, values]) => {
-      const row = this.el('tr');
-      row.append(this.el('td', { text: state }));
-      values.forEach(value => row.append(this.el('td', { text: value })));
-      matrix.append(row);
-    });
-    matrixWrap.append(matrix);
-    config.append(matrixWrap);
-    config.append(this.el('hr'));
     config.append(this.el('h3', { text: 'When should “Kiln complete” be sent?' }));
     config.append(this.el('p', { class: 'muted', text: 'The integration waits for the kiln to stop, then checks this rule before notifying employees.' }));
     const completionForm = this.el('form');
@@ -970,7 +924,7 @@ class KilnEmployeesPanel extends HTMLElement {
     completionRule.onchange = updateRuleHelp;
     updateRuleHelp();
     completionForm.append(ruleHelp);
-    const saveRule = this.el('button', { text: 'Save Kiln 3 Settings' });
+    const saveRule = this.el('button', { text: 'Save Completion Rule' });
     saveRule.type = 'submit';
     completionForm.append(this.el('div', { class: 'actions' }), saveRule);
     completionForm.onsubmit = async event => {
@@ -979,11 +933,7 @@ class KilnEmployeesPanel extends HTMLElement {
       this.busy = true;
       saveRule.disabled = true;
       try {
-        await this.call('save_kiln_config', {
-          kiln_id: '3',
-          completion_rule: completionRule.value,
-          signal_entities: Object.fromEntries(Object.entries(entityInputs).map(([key, input]) => [key, input.value.trim()])),
-        });
+        await this.call('save_kiln_config', { kiln_id: '3', completion_rule: completionRule.value });
         this.notice = 'Kiln 3 completion rule saved.';
         await this.load();
       } catch (error) {

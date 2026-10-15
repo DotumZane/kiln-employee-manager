@@ -72,9 +72,7 @@ async def async_setup_alerts(hass, entry, manager):
             return
         state["busy"] = True
         try:
-            entity = manager["data"].get("settings", {}).get("kiln_configs", {}).get("3", {}).get(
-                "signal_entities", {}
-            ).get("communication") or manager["data"].get("entities", {}).get(
+            entity = manager["data"].get("entities", {}).get(
                 "kiln_3_plc_communication", ENTITY
             )
             reading = hass.states.get(entity)
