@@ -122,9 +122,9 @@ async def async_setup_completion(
 
     @callback
     def on_completion_event(event) -> None:
-        entity = manager["data"].get("entities", {}).get(
-            "kiln_3_status", COMPLETION_ENTITY
-        )
+        entity = data.get("settings", {}).get("kiln_configs", {}).get("3", {}).get(
+            "signal_entities", {}
+        ).get("status") or data.get("entities", {}).get("kiln_3_status", COMPLETION_ENTITY)
         if event.data.get("entity_id") != entity:
             return
         old_state = event.data.get("old_state")
@@ -144,9 +144,9 @@ async def async_setup_completion(
         completed_at = new_state.last_changed
         hass.async_create_task(process(completion_id, completed_at))
 
-    completion_entity = manager["data"].get("entities", {}).get(
-        "kiln_3_status", COMPLETION_ENTITY
-    )
+    completion_entity = data.get("settings", {}).get("kiln_configs", {}).get("3", {}).get(
+        "signal_entities", {}
+    ).get("status") or data.get("entities", {}).get("kiln_3_status", COMPLETION_ENTITY)
     current = hass.states.get(completion_entity)
     # Establish a baseline at startup; do not announce a kiln that was already
     # stopped before Home Assistant or the integration loaded.

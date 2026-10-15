@@ -11,6 +11,7 @@ from .const import (
     DOMAIN,
     ENTITY_LABELS,
     KILN_3_RAW_MQTT_TOPIC,
+    KILN_3_SIGNAL_ENTITY_DEFAULTS,
     WS_REGISTERED_KEY,
 )
 from .config_flow import validate_employee, DAYS
@@ -435,10 +436,18 @@ async def ws_save_kiln_config(hass, connection, msg):
     if kiln_id not in {"1", "2", "3"} or rule not in COMPLETION_RULES:
         connection.send_error(msg["id"], "invalid_kiln_config", "Invalid kiln or completion rule")
         return
+    signal_entities = msg.get("signal_entities", dict(KILN_3_SIGNAL_ENTITY_DEFAULTS))
+    if (not isinstance(signal_entities, dict)
+            or set(signal_entities) != set(KILN_3_SIGNAL_ENTITY_DEFAULTS)
+            or any(not isinstance(value, str) or not ENTITY_ID_RE.fullmatch(value.strip())
+                   for value in signal_entities.values())):
+        connection.send_error(msg["id"], "invalid_kiln_config", "Enter valid Home Assistant entity IDs for every signal")
+        return
+    signal_entities = {key: value.strip() for key, value in signal_entities.items()}
     settings = mgr["data"].setdefault("settings", {})
     configs = settings.setdefault("kiln_configs", {})
     previous = dict(configs.get(kiln_id, {}))
-    configs[kiln_id] = {**previous, "completion_rule": rule}
+    configs[kiln_id] = {**previous, "completion_rule": rule, "signal_entities": signal_entities}
     try:
         await mgr["store"].async_save(mgr["data"])
     except Exception:

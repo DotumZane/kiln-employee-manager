@@ -16,6 +16,7 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
     DEFAULT_ENTITIES,
+    KILN_3_SIGNAL_ENTITY_DEFAULTS,
 )
 from .plc_alerts import async_setup_alerts
 from .completion import async_setup_completion
@@ -57,6 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data["settings"].setdefault("kiln_paused_delay_seconds", 300)
     data["settings"].setdefault("kiln_configs", {})
     data["settings"]["kiln_configs"].setdefault("3", {"completion_rule": "stopped_idle"})
+    data["settings"]["kiln_configs"]["3"].setdefault("signal_entities", dict(KILN_3_SIGNAL_ENTITY_DEFAULTS))
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "store": store,

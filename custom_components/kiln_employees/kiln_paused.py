@@ -79,7 +79,9 @@ async def async_setup_paused(hass, entry, manager):
             return
         state["busy"] = True
         try:
-            entity = manager["data"].get("entities", {}).get("kiln_3_status", ENTITY)
+            entity = manager["data"].get("settings", {}).get("kiln_configs", {}).get("3", {}).get(
+                "signal_entities", {}
+            ).get("status") or manager["data"].get("entities", {}).get("kiln_3_status", ENTITY)
             reading = hass.states.get(entity)
             current = reading.state if reading else "unknown"
             now = dt_util.utcnow()
@@ -99,7 +101,9 @@ async def async_setup_paused(hass, entry, manager):
 
     @callback
     def on_status_change(event):
-        entity = manager["data"].get("entities", {}).get("kiln_3_status", ENTITY)
+        entity = manager["data"].get("settings", {}).get("kiln_configs", {}).get("3", {}).get(
+            "signal_entities", {}
+        ).get("status") or manager["data"].get("entities", {}).get("kiln_3_status", ENTITY)
         if event.data.get("entity_id") != entity:
             return
         old_state = event.data.get("old_state")

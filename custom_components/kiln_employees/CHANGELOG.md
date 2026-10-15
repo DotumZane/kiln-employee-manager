@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.16.0
+
+- Added a Kiln 3 state-signal matrix with one editable Home Assistant entity
+  column per signal and Running, Paused, and Stopped / Idle rows.
+
 ## 1.15.3
 
 - Limited automatic two-second refreshes to the read-only Raw PLC Data page,

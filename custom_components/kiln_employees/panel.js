@@ -205,6 +205,7 @@ class KilnEmployeesPanel extends HTMLElement {
       .recipients th,.recipients td{border-bottom:1px solid var(--divider-color);padding:11px 7px;text-align:left}
       .recipients th:not(:first-child),.recipients td:not(:first-child){text-align:center}
       .recipients td input{width:20px;height:20px}
+      .matrix-wrap{overflow-x:auto}.matrix{min-width:900px}.matrix th{vertical-align:top;font-size:12px}.matrix th input{min-width:125px;font-size:12px;font-weight:400}.matrix td{white-space:nowrap;font-size:13px}
       .pill{display:inline-block;font-size:12px;color:var(--secondary-text-color)}
       .status-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--divider-color);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;white-space:nowrap;background:var(--secondary-background-color)}
       .status-badge.active{border-color:#4aa67a;color:var(--primary-text-color);background:rgba(28,132,79,.12)}
@@ -889,11 +890,57 @@ class KilnEmployeesPanel extends HTMLElement {
     config.append(this.el('h3', { text: 'Kiln 3 Settings' }));
     config.append(this.el('p', { class: 'muted', text: 'Choose what counts as a completed kiln cycle and open the other Kiln 3 settings.' }));
     config.append(this.el('div', { class: 'muted', text: `Data source: PLC data received through MQTT (${data.topic || 'Unknown'})` }));
+    const kilnConfigs = this.settings.kiln_configs || {};
+    const kilnThreeConfig = kilnConfigs['3'] || {};
+    config.append(this.el('hr'));
+    config.append(this.el('h3', { text: 'Kiln 3 State Signals' }));
+    config.append(this.el('p', { class: 'muted', text: 'Each column is a Home Assistant entity. The rows show the values expected for each kiln state. Change an entity ID here if another kiln uses different entities.' }));
+    const entityDefaults = {
+      status: 'sensor.kiln_3_status',
+      paused: 'binary_sensor.kiln_3_paused',
+      normal_stop: 'binary_sensor.kiln_3_normal_stop',
+      down: 'binary_sensor.kiln_3_down',
+      current_step: 'sensor.kiln_3_current_step',
+      final_step: 'sensor.kiln_3_final_step',
+      communication: 'binary_sensor.kiln_3_plc_communication',
+    };
+    const signalEntities = { ...entityDefaults, ...(kilnThreeConfig.signal_entities || {}) };
+    const signalColumns = [
+      ['status', 'Status entity'], ['paused', 'Paused entity'],
+      ['normal_stop', 'Normal Stop entity'], ['down', 'Kiln Down entity'],
+      ['current_step', 'Current Step entity'], ['final_step', 'Final Step entity'],
+      ['communication', 'Connection entity'],
+    ];
+    const entityInputs = {};
+    const matrixWrap = this.el('div', { class: 'matrix-wrap' });
+    const matrix = this.el('table', { class: 'recipients matrix' });
+    const matrixHeader = this.el('tr');
+    matrixHeader.append(this.el('th', { text: 'Kiln state' }));
+    signalColumns.forEach(([key, label]) => {
+      const th = this.el('th');
+      th.append(this.el('div', { text: label }));
+      const input = this.el('input', { type: 'text', value: signalEntities[key] });
+      input.setAttribute('aria-label', label);
+      entityInputs[key] = input;
+      th.append(input);
+      matrixHeader.append(th);
+    });
+    matrix.append(matrixHeader);
+    [
+      ['Running', ['Running', 'off', 'Any', 'Any', 'Any', 'Any', 'on']],
+      ['Paused', ['Paused', 'on', 'Any', 'Any', 'Any', 'Any', 'on']],
+      ['Stopped / Idle', ['Stopped / Idle', 'off', 'Any', 'Any', 'Any', 'Any', 'on']],
+    ].forEach(([state, values]) => {
+      const row = this.el('tr');
+      row.append(this.el('td', { text: state }));
+      values.forEach(value => row.append(this.el('td', { text: value })));
+      matrix.append(row);
+    });
+    matrixWrap.append(matrix);
+    config.append(matrixWrap);
     config.append(this.el('hr'));
     config.append(this.el('h3', { text: 'When should “Kiln complete” be sent?' }));
     config.append(this.el('p', { class: 'muted', text: 'The integration waits for the kiln to stop, then checks this rule before notifying employees.' }));
-    const kilnConfigs = this.settings.kiln_configs || {};
-    const kilnThreeConfig = kilnConfigs['3'] || {};
     const completionForm = this.el('form');
     const completionRule = this.field(completionForm, 'Send the completion notification when', 'completion_rule', 'select', kilnThreeConfig.completion_rule || 'stopped_idle', [
       ['stopped_idle', 'The kiln stops (current default)'],
@@ -923,7 +970,11 @@ class KilnEmployeesPanel extends HTMLElement {
       this.busy = true;
       saveRule.disabled = true;
       try {
-        await this.call('save_kiln_config', { kiln_id: '3', completion_rule: completionRule.value });
+        await this.call('save_kiln_config', {
+          kiln_id: '3',
+          completion_rule: completionRule.value,
+          signal_entities: Object.fromEntries(Object.entries(entityInputs).map(([key, input]) => [key, input.value.trim()])),
+        });
         this.notice = 'Kiln 3 completion rule saved.';
         await this.load();
       } catch (error) {
