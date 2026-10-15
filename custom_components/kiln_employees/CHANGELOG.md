@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.14.0
+
+- Added a functional Kiln 3 monitoring dashboard with live status, PLC health,
+  operating signals, and links to the relevant configuration pages.
+
 ## 1.13.1
 
 - Updated the raw PLC data display labels to identify the physical Kiln #3;

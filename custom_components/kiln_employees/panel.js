@@ -211,6 +211,9 @@ class KilnEmployeesPanel extends HTMLElement {
       .status-badge.vacation{border-color:#d6a043;color:var(--primary-text-color);background:rgba(214,160,67,.13)}
       .status-badge.inactive{opacity:.7}
       .status-badge.unavailable{border-color:#c45d5d;color:var(--primary-text-color)}
+      .metric{padding:12px;border:1px solid var(--divider-color);border-radius:10px;background:var(--secondary-background-color)}
+      .metric-value{font-size:18px;font-weight:700;margin-top:4px}
+      .signal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
       .employee-info{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
       .employee-info h2{margin:0}
       .employee-status-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -822,23 +825,76 @@ class KilnEmployeesPanel extends HTMLElement {
       return;
     }
     if (this.kilnTab === '3') {
-      const card = this.el('div', { class: 'card' });
-      card.append(this.el('h3', { text: 'Kiln 3 Configuration' }));
-      card.append(this.el('p', { class: 'muted', text: 'Kiln 3 is currently connected through the raw PLC MQTT monitor. Entity mappings remain available from the Entities page; kiln-specific configuration will be expanded here.' }));
-      const grid = this.el('div', { class: 'grid' });
-      [['Status', this.plcData.last_status || 'Unknown'], ['PLC clock', this.plcData.last_clock ?? 'Unknown'], ['Data valid', this.plcData.data_valid ? 'Yes' : 'No'], ['Raw topic', this.plcData.topic || 'Unknown']].forEach(([label, value]) => {
-        const item = this.el('div');
-        item.append(this.el('div', { class: 'muted', text: label }), this.el('div', { text: String(value) }));
-        grid.append(item);
-      });
-      card.append(grid);
-      shell.append(card);
+      this.renderKilnThree(shell);
       return;
     }
     const card = this.el('div', { class: 'card' });
     card.append(this.el('h3', { text: `Kiln ${this.kilnTab} Configuration` }));
     card.append(this.el('p', { class: 'muted', text: 'This kiln page is ready for its PLC tag mappings, MQTT signals, alarms, and notification rules.' }));
     shell.append(card);
+  }
+
+  renderKilnThree(shell) {
+    const data = this.plcData || {};
+    const raw = data.raw && typeof data.raw === 'object' ? data.raw : {};
+    const status = data.last_status || 'Unknown';
+    const communication = this.entities.kiln_3_plc_communication || {};
+    const statusCard = this.el('div', { class: 'card' });
+    const heading = this.el('div', { class: 'section-top' });
+    heading.append(this.el('h3', { text: 'Kiln 3 Monitoring' }));
+    const badge = this.el('span', { class: `status-badge ${status === 'Running' ? 'active' : status === 'Unknown' ? 'unavailable' : 'off'}`, text: status });
+    heading.append(badge);
+    statusCard.append(heading);
+    statusCard.append(this.el('p', { class: 'muted', text: 'This page is the Kiln 3 operating dashboard. Home Assistant interprets the raw PLC data received through MQTT.' }));
+    const metrics = this.el('div', { class: 'grid' });
+    [
+      ['PLC clock', data.last_clock ?? 'Unknown'],
+      ['Data valid', data.data_valid ? 'Yes' : 'No'],
+      ['PLC communication', communication.state || 'Unknown'],
+      ['Last raw message', KilnEmployeesPanel.formatTimestamp(data.last_received)],
+    ].forEach(([label, value]) => {
+      const item = this.el('div', { class: 'metric' });
+      item.append(this.el('div', { class: 'muted', text: label }), this.el('div', { class: 'metric-value', text: String(value) }));
+      metrics.append(item);
+    });
+    statusCard.append(metrics);
+    shell.append(statusCard);
+
+    const signals = this.el('div', { class: 'card' });
+    signals.append(this.el('h3', { text: 'Kiln 3 Operating Signals' }));
+    signals.append(this.el('p', { class: 'muted', text: 'These are the PLC signals currently used to determine Running, Paused, and Stopped / Idle.' }));
+    const signalGrid = this.el('div', { class: 'signal-grid' });
+    [
+      ['Kiln 3 On', 'Kiln1_ON'],
+      ['Kiln 3 Pause', 'Kiln1_Pause'],
+      ['Kiln 3 Normal Stop', 'Program:Kiln1.Normal_Stop'],
+      ['Kiln 3 Down', 'Program:Kiln1.Kiln_Down'],
+      ['Kiln 3 Step Number', 'Program:Kiln1.Step_Number'],
+      ['Kiln 3 Step Stop', 'Program:Kiln1.Step_Stop'],
+    ].forEach(([label, key]) => {
+      const item = this.el('div', { class: 'metric' });
+      item.append(this.el('div', { class: 'muted', text: label }), this.el('div', { class: 'metric-value', text: raw[key] === undefined ? 'Missing' : String(raw[key]) }));
+      signalGrid.append(item);
+    });
+    signals.append(signalGrid);
+    shell.append(signals);
+
+    const config = this.el('div', { class: 'card' });
+    config.append(this.el('h3', { text: 'Kiln 3 Configuration Sources' }));
+    config.append(this.el('p', { class: 'muted', text: 'Use these pages to change the shared settings that currently control Kiln 3.' }));
+    config.append(this.el('div', { class: 'muted', text: `Raw MQTT topic: ${data.topic || 'Unknown'}` }));
+    const actions = this.el('div', { class: 'actions' });
+    const openPage = (label, tab, kilnTab = this.kilnTab) => {
+      const button = this.el('button', { text: label, class: 'secondary' });
+      button.type = 'button';
+      button.onclick = () => { this.tab = tab; this.kilnTab = kilnTab; this.render(); };
+      actions.append(button);
+    };
+    openPage('View Raw PLC Data', 'kilns', 'plc');
+    openPage('Edit Entity Mappings', 'entities');
+    openPage('Manage Alerts', 'alerts');
+    config.append(actions);
+    shell.append(config);
   }
 
   renderPlcData(shell) {
