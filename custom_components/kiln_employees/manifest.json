@@ -1,7 +1,7 @@
 {
   "domain": "kiln_employees",
   "name": "Kiln Employee Manager",
-  "version": "1.15.2",
+  "version": "1.15.3",
   "documentation": "https://developers.home-assistant.io/",
   "config_flow": true,
   "integration_type": "hub",

@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.15.3
+
+- Limited automatic two-second refreshes to the read-only Raw PLC Data page,
+  so Kiln settings can be edited without the page resetting.
+
 ## 1.15.2
 
 - Collapsed advanced PLC signal details by default so the Kiln 3 page focuses

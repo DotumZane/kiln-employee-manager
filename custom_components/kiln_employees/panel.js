@@ -33,10 +33,11 @@ class KilnEmployeesPanel extends HTMLElement {
   connectedCallback() {
     if (this._refreshTimer !== null) return;
     this._refreshTimer = window.setInterval(() => {
-      // Never overwrite partially edited employee or time-off forms. PLC data
-      // is intentionally refreshed frequently while its read-only tab is open.
+      // Never overwrite partially edited forms. Only the read-only Raw PLC
+      // Data page is refreshed automatically; settings pages must remain
+      // stable while the user edits them.
       if (this.loaded && !this.busy && this.mode === 'list' &&
-          this.tab === 'kilns' && ['3', 'plc'].includes(this.kilnTab)) {
+          this.tab === 'kilns' && this.kilnTab === 'plc') {
         this.load();
       }
     }, 2000);
