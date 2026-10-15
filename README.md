@@ -15,7 +15,7 @@ reloaded through the Home Assistant integration reload control.
 
 ## Current version
 
-The current release is **1.19.1**. See
+The current release is **1.19.2**. See
 [`custom_components/kiln_employees/CHANGELOG.md`](custom_components/kiln_employees/CHANGELOG.md)
 for release notes.
 

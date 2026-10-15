@@ -643,8 +643,8 @@ class KilnEmployeesPanel extends HTMLElement {
       heading.append(this.el('strong', { text: info.label }));
       const actions = this.el('div', { class: 'entity-actions' });
       if (this.additionalEditingIndex === index) {
-        const name = this.el('input', { type: 'text', value: info.label });
-        const entity = this.el('input', { type: 'text', value: info.entity_id });
+        const name = this.el('input', { type: 'text', value: info.label, placeholder: 'Friendly name' });
+        const entity = this.el('input', { type: 'text', value: info.entity_id, placeholder: 'sensor.example or binary_sensor.example' });
         const kiln = this.el('select');
         [['shared', 'Shared'], ['1', 'Kiln 1'], ['2', 'Kiln 2'], ['3', 'Kiln 3']].forEach(([value, label]) => {
           const option = this.el('option', { text: label });
@@ -654,10 +654,17 @@ class KilnEmployeesPanel extends HTMLElement {
         kiln.value = info.kiln_id || 'shared';
         name.setAttribute('aria-label', 'Additional entity name');
         entity.setAttribute('aria-label', 'Additional entity ID');
+        name.required = true;
+        entity.required = true;
         kiln.setAttribute('aria-label', 'Assign entity to kiln');
         const save = this.el('button', { text: 'Save' });
         save.type = 'button';
         save.onclick = () => {
+          if (!name.value.trim() || !entity.value.trim()) {
+            this.error = 'Enter both a friendly name and a Home Assistant entity ID.';
+            this.render();
+            return;
+          }
           const additional = currentAdditional();
           additional[index] = { name: name.value.trim(), entity_id: entity.value.trim(), kiln_id: kiln.value };
           persist(currentEntities(), additional);
@@ -681,8 +688,12 @@ class KilnEmployeesPanel extends HTMLElement {
         row.append(heading, this.el('div', { class: 'muted', text: `${info.entity_id} · ${info.kiln_id === 'shared' || !info.kiln_id ? 'Shared' : `Kiln ${info.kiln_id}`}` }));
         actions.append(edit, remove);
       }
-      const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
-      row.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }), actions);
+      if (!info.isNew) {
+        const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';
+        row.append(this.el('div', { class: info.exists ? 'entity-status ok' : 'entity-status error', text: status }), actions);
+      } else {
+        row.append(this.el('div', { class: 'muted hint', text: 'Enter the entity ID and choose which kiln uses it.' }), actions);
+      }
       card.append(row);
     });
     const add = this.el('button', { text: '+ Add Entity', class: 'secondary' });

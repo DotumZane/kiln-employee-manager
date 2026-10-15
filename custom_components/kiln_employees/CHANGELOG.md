@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.19.2
+
+- Improved the Add Entity form with validation, placeholders, and clearer guidance.
+- Preserved the assigned kiln when editing additional entities.
+
 ## 1.19.1
 
 - Keep live PLC data available when saving MQTT and PLC signal settings.

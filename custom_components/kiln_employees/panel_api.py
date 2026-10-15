@@ -136,7 +136,8 @@ def ws_list(hass, connection, msg):
             for key, default in DEFAULT_ENTITIES.items()
         },
         "additional_entities": [
-            _entity_info(hass, item["entity_id"], item["name"])
+            {**_entity_info(hass, item["entity_id"], item["name"]),
+             "kiln_id": item.get("kiln_id", "shared")}
             for item in mgr["data"].get("additional_entities", [])
             if isinstance(item, dict) and item.get("entity_id") and item.get("name")
         ],
