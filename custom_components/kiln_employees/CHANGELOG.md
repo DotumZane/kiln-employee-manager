@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.15.2
+
+- Collapsed advanced PLC signal details by default so the Kiln 3 page focuses
+  on current status and completion settings.
+
 ## 1.15.1
 
 - Simplified the Kiln 3 dashboard wording and completion-rule choices for

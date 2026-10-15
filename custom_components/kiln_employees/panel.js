@@ -214,6 +214,10 @@ class KilnEmployeesPanel extends HTMLElement {
       .metric{padding:12px;border:1px solid var(--divider-color);border-radius:10px;background:var(--secondary-background-color)}
       .metric-value{font-size:18px;font-weight:700;margin-top:4px}
       .signal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+      details.card>summary{cursor:pointer;font-size:16px;font-weight:700;list-style:none}
+      details.card>summary::-webkit-details-marker{display:none}
+      details.card>summary:before{content:'＋';display:inline-block;margin-right:8px;color:var(--primary-color,#1976d2)}
+      details.card[open]>summary:before{content:'−'}
       .employee-info{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
       .employee-info h2{margin:0}
       .employee-status-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -860,8 +864,9 @@ class KilnEmployeesPanel extends HTMLElement {
     statusCard.append(metrics);
     shell.append(statusCard);
 
-    const signals = this.el('div', { class: 'card' });
-    signals.append(this.el('h3', { text: 'Kiln 3 Operating Signals' }));
+    const signals = this.el('details', { class: 'card' });
+    const signalSummary = this.el('summary', { text: 'Advanced PLC details' });
+    signals.append(signalSummary);
     signals.append(this.el('p', { class: 'muted', text: 'These live signals help determine whether Kiln 3 is running, paused, or stopped.' }));
     const signalGrid = this.el('div', { class: 'signal-grid' });
     [
