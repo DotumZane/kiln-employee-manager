@@ -1,7 +1,7 @@
 """Shared constants for the Kiln Employee Manager integration."""
 
 DOMAIN = "kiln_employees"
-INTEGRATION_VERSION = "1.16.0"
+INTEGRATION_VERSION = "1.16.1"
 
 # Persistent storage schema version.  Keep this separate from the integration
 # version: changing code does not automatically require a data migration.
@@ -10,7 +10,7 @@ STORAGE_KEY = "kiln_employee_manager"
 
 PANEL_URL_PATH = "kiln-employees"
 PANEL_STATIC_URL = "/kiln-employees-static/panel.js"
-PANEL_CACHE_VERSION = 33
+PANEL_CACHE_VERSION = 34
 DEFAULT_ENTITIES = {
     "time_off_calendar": "calendar.kiln_employee_time_off",
     "kiln_3_status": "sensor.kiln_3_status",

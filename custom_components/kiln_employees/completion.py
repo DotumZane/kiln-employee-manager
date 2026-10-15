@@ -17,24 +17,38 @@ STOPPED_STATE = "Stopped / Idle"
 MAX_PROCESSED_IDS = 100
 
 
-def _matches_completion_rule(manager: dict, kiln_id: str, rule: str) -> bool:
-    """Check the configured completion condition against the latest PLC values."""
+def _signal_entities(manager: dict) -> dict:
+    return manager["data"].get("settings", {}).get("kiln_configs", {}).get("3", {}).get("signal_entities", {})
+
+
+def _matches_completion_rule(hass, manager: dict, kiln_id: str, rule: str) -> bool:
+    """Check the configured completion condition against HA signals and PLC fallback data."""
     values = manager.get("kiln_monitor", {}).get("values")
     if rule == "stopped_idle":
         return True
     if not isinstance(values, dict):
         return False
+    entities = _signal_entities(manager)
+
+    def is_on(signal: str, raw_key: str) -> bool:
+        reading = hass.states.get(entities.get(signal, ""))
+        return (reading is not None and reading.state == "on") or values.get(raw_key) is True
+
     if rule == "normal_stop_or_down":
-        return values.get("Normal_Stop") is True or values.get("Kiln_Down") is True
+        return is_on("normal_stop", "Normal_Stop") or is_on("down", "Kiln_Down")
     if rule == "normal_stop":
-        return values.get("Normal_Stop") is True
+        return is_on("normal_stop", "Normal_Stop")
     if rule == "kiln_down":
-        return values.get("Kiln_Down") is True
+        return is_on("down", "Kiln_Down")
     if rule == "final_step":
-        return (isinstance(values.get("Step_Number"), int)
-                and isinstance(values.get("Step_Stop"), int)
-                and values["Step_Stop"] > 0
-                and values["Step_Number"] >= values["Step_Stop"])
+        current_reading = hass.states.get(entities.get("current_step", ""))
+        final_reading = hass.states.get(entities.get("final_step", ""))
+        try:
+            current_step = int(current_reading.state) if current_reading else values["Step_Number"]
+            final_step = int(final_reading.state) if final_reading else values["Step_Stop"]
+        except (KeyError, TypeError, ValueError):
+            return False
+        return final_step > 0 and current_step >= final_step
     return False
 
 
@@ -137,7 +151,7 @@ async def async_setup_completion(
         completion_rule = kiln_config.get("completion_rule", "stopped_idle")
         if completion_rule not in COMPLETION_RULES:
             completion_rule = "stopped_idle"
-        if not _matches_completion_rule(manager, "3", completion_rule):
+        if not _matches_completion_rule(hass, manager, "3", completion_rule):
             _LOGGER.info("Kiln #3 stopped without meeting completion rule %s", completion_rule)
             return
         completion_id = new_state.last_changed.isoformat()

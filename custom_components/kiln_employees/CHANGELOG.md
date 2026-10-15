@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.16.1
+
+- Connected the Kiln 3 signal matrix to completion, pause, and communication
+  monitoring so saved entity changes are functional.
+
 ## 1.16.0
 
 - Added a Kiln 3 state-signal matrix with one editable Home Assistant entity
