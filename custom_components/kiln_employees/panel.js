@@ -845,12 +845,12 @@ class KilnEmployeesPanel extends HTMLElement {
     const badge = this.el('span', { class: `status-badge ${status === 'Running' ? 'active' : status === 'Unknown' ? 'unavailable' : 'off'}`, text: status });
     heading.append(badge);
     statusCard.append(heading);
-    statusCard.append(this.el('p', { class: 'muted', text: 'This page is the Kiln 3 operating dashboard. Home Assistant interprets the raw PLC data received through MQTT.' }));
+    statusCard.append(this.el('p', { class: 'muted', text: 'This page shows what Kiln 3 is doing now and whether Home Assistant is receiving good data from the PLC.' }));
     const metrics = this.el('div', { class: 'grid' });
     [
       ['PLC clock', data.last_clock ?? 'Unknown'],
-      ['Data valid', data.data_valid ? 'Yes' : 'No'],
-      ['PLC communication', communication.state || 'Unknown'],
+      ['Data quality', data.data_valid ? 'Valid data' : 'Waiting for valid data'],
+      ['PLC connection', communication.state === 'on' ? 'Connected' : communication.state === 'off' ? 'Disconnected' : 'Unknown'],
       ['Last raw message', KilnEmployeesPanel.formatTimestamp(data.last_received)],
     ].forEach(([label, value]) => {
       const item = this.el('div', { class: 'metric' });
@@ -862,7 +862,7 @@ class KilnEmployeesPanel extends HTMLElement {
 
     const signals = this.el('div', { class: 'card' });
     signals.append(this.el('h3', { text: 'Kiln 3 Operating Signals' }));
-    signals.append(this.el('p', { class: 'muted', text: 'These are the PLC signals currently used to determine Running, Paused, and Stopped / Idle.' }));
+    signals.append(this.el('p', { class: 'muted', text: 'These live signals help determine whether Kiln 3 is running, paused, or stopped.' }));
     const signalGrid = this.el('div', { class: 'signal-grid' });
     [
       ['Kiln 3 On', 'Kiln1_ON'],
@@ -880,22 +880,34 @@ class KilnEmployeesPanel extends HTMLElement {
     shell.append(signals);
 
     const config = this.el('div', { class: 'card' });
-    config.append(this.el('h3', { text: 'Kiln 3 Configuration Sources' }));
-    config.append(this.el('p', { class: 'muted', text: 'Use these pages to change the shared settings that currently control Kiln 3.' }));
-    config.append(this.el('div', { class: 'muted', text: `Raw MQTT topic: ${data.topic || 'Unknown'}` }));
+    config.append(this.el('h3', { text: 'Kiln 3 Settings' }));
+    config.append(this.el('p', { class: 'muted', text: 'Choose what counts as a completed kiln cycle and open the other Kiln 3 settings.' }));
+    config.append(this.el('div', { class: 'muted', text: `Data source: PLC data received through MQTT (${data.topic || 'Unknown'})` }));
     config.append(this.el('hr'));
-    config.append(this.el('h3', { text: 'Completion Rule' }));
-    config.append(this.el('p', { class: 'muted', text: 'Choose which PLC condition allows a Stopped / Idle transition to send the kiln completion notification. The default keeps the current behavior.' }));
+    config.append(this.el('h3', { text: 'When should “Kiln complete” be sent?' }));
+    config.append(this.el('p', { class: 'muted', text: 'The integration waits for the kiln to stop, then checks this rule before notifying employees.' }));
     const kilnConfigs = this.settings.kiln_configs || {};
     const kilnThreeConfig = kilnConfigs['3'] || {};
     const completionForm = this.el('form');
-    const completionRule = this.field(completionForm, 'Kiln 3 is complete when', 'completion_rule', 'select', kilnThreeConfig.completion_rule || 'stopped_idle', [
-      ['stopped_idle', 'Stopped / Idle'],
-      ['normal_stop_or_down', 'Normal Stop or Kiln Down'],
-      ['normal_stop', 'Normal Stop'],
-      ['kiln_down', 'Kiln Down'],
-      ['final_step', 'At or past the final step'],
+    const completionRule = this.field(completionForm, 'Send the completion notification when', 'completion_rule', 'select', kilnThreeConfig.completion_rule || 'stopped_idle', [
+      ['stopped_idle', 'The kiln stops (current default)'],
+      ['normal_stop_or_down', 'Normal Stop or Kiln Down is reported'],
+      ['normal_stop', 'Normal Stop is reported'],
+      ['kiln_down', 'Kiln Down is reported'],
+      ['final_step', 'The kiln reaches or passes the final step'],
     ]);
+    const ruleHelp = this.el('div', { class: 'muted hint' });
+    const descriptions = {
+      stopped_idle: 'Sends when the kiln changes to Stopped / Idle.',
+      normal_stop_or_down: 'Sends only when the stopped kiln also reports Normal Stop or Kiln Down.',
+      normal_stop: 'Sends only when the stopped kiln reports Normal Stop.',
+      kiln_down: 'Sends only when the stopped kiln reports Kiln Down.',
+      final_step: 'Sends only when the stopped kiln is at or beyond its configured final step.',
+    };
+    const updateRuleHelp = () => { ruleHelp.textContent = descriptions[completionRule.value] || ''; };
+    completionRule.onchange = updateRuleHelp;
+    updateRuleHelp();
+    completionForm.append(ruleHelp);
     const saveRule = this.el('button', { text: 'Save Completion Rule' });
     saveRule.type = 'submit';
     completionForm.append(this.el('div', { class: 'actions' }), saveRule);
@@ -923,9 +935,9 @@ class KilnEmployeesPanel extends HTMLElement {
       button.onclick = () => { this.tab = tab; this.kilnTab = kilnTab; this.render(); };
       actions.append(button);
     };
-    openPage('View Raw PLC Data', 'kilns', 'plc');
-    openPage('Edit Entity Mappings', 'entities');
-    openPage('Manage Alerts', 'alerts');
+    openPage('View PLC Data', 'kilns', 'plc');
+    openPage('Choose Home Assistant Entities', 'entities');
+    openPage('Choose Alert Recipients and Delays', 'alerts');
     config.append(actions);
     shell.append(config);
   }

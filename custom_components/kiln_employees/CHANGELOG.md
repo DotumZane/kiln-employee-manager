@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.15.1
+
+- Simplified the Kiln 3 dashboard wording and completion-rule choices for
+  easier operator use.
+
 ## 1.15.0
 
 - Added per-kiln completion-rule storage and a Kiln 3 editor. The default
