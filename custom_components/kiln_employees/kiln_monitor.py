@@ -1,9 +1,4 @@
-"""Interpret raw Kiln #3 PLC MQTT data inside Home Assistant.
-
-Node-RED remains a read-only PLC-to-MQTT bridge.  This module owns the
-heartbeat and operating-state interpretation so completion and pause alerts do
-not depend on Node-RED's derived status message.
-"""
+"""Interpret configured raw PLC MQTT data inside Home Assistant."""
 
 import json
 import logging
@@ -15,39 +10,40 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    KILN_3_COMMUNICATION_MQTT_TOPIC,
-    KILN_3_CURRENT_STEP_MQTT_TOPIC,
-    KILN_3_DOWN_MQTT_TOPIC,
-    KILN_3_FINAL_STEP_MQTT_TOPIC,
-    KILN_3_NORMAL_STOP_MQTT_TOPIC,
-    KILN_3_PAUSED_MQTT_TOPIC,
-    KILN_3_RAW_MQTT_TOPIC,
-    KILN_3_STATUS_MQTT_TOPIC,
+    KILN_3_COMMUNICATION_MQTT_TOPIC, KILN_3_CURRENT_STEP_MQTT_TOPIC,
+    KILN_3_DOWN_MQTT_TOPIC, KILN_3_FINAL_STEP_MQTT_TOPIC,
+    KILN_3_NORMAL_STOP_MQTT_TOPIC, KILN_3_PAUSED_MQTT_TOPIC,
+    KILN_3_RAW_MQTT_TOPIC, KILN_3_STATUS_MQTT_TOPIC,
 )
 
 _LOGGER = logging.getLogger(__name__)
-_PREFIX = "Program:Kiln1."
-_CLOCK = "PLC_ClockValues[5]"
-_HEARTBEAT_TIMEOUT = 5
-_BOOL_TAGS = {"Kiln1_ON", "Kiln1_Pause", "Normal_Stop", "Kiln_Down"}
-_REQUIRED = _BOOL_TAGS | {"Step_Number", "Step_Stop"}
+_DEFAULT_TAGS = {
+    "on": "Kiln1_ON", "pause": "Kiln1_Pause", "clock": "PLC_ClockValues[5]",
+    "normal_stop": "Program:Kiln1.Normal_Stop",
+    "kiln_down": "Program:Kiln1.Kiln_Down",
+    "step_number": "Program:Kiln1.Step_Number",
+    "step_stop": "Program:Kiln1.Step_Stop",
+}
 
 
-def _normalize(raw: dict) -> dict:
-    values = {}
-    for key, value in raw.items():
-        name = key[len(_PREFIX):] if key.startswith(_PREFIX) else key
-        values[name] = value
-    return values
+def _tags(config: dict) -> dict:
+    configured = config.get("tags") if isinstance(config.get("tags"), dict) else {}
+    return {key: str(configured.get(key) or value) for key, value in _DEFAULT_TAGS.items()}
+
+
+def _normalize(raw: dict, config: dict) -> dict:
+    configured = _tags(config)
+    return {logical: raw[tag] for logical, tag in configured.items() if tag in raw}
 
 
 def _validated(values: dict) -> dict | None:
-    if not _REQUIRED.issubset(values):
+    required = {"on", "pause", "normal_stop", "kiln_down", "step_number", "step_stop"}
+    if not required.issubset(values):
         return None
     result = {}
-    for name in _REQUIRED:
+    for name in required:
         value = values[name]
-        if name in _BOOL_TAGS:
+        if name in {"on", "pause", "normal_stop", "kiln_down"}:
             if value in (1, "true"):
                 value = True
             elif value in (0, "false"):
@@ -61,9 +57,9 @@ def _validated(values: dict) -> dict | None:
 
 
 def _status(values: dict) -> tuple[str, bool, bool, bool]:
-    running = values["Kiln1_ON"] is True and values["Kiln1_Pause"] is False
-    paused = values["Kiln1_ON"] is False and values["Kiln1_Pause"] is True
-    stopped = values["Kiln1_ON"] is False and values["Kiln1_Pause"] is False
+    running = values["on"] is True and values["pause"] is False
+    paused = values["on"] is False and values["pause"] is True
+    stopped = values["on"] is False and values["pause"] is False
     if running:
         return "Running", running, paused, stopped
     if paused:
@@ -74,70 +70,55 @@ def _status(values: dict) -> tuple[str, bool, bool, bool]:
 
 
 async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None:
-    """Subscribe to raw PLC data and publish the existing derived MQTT topics."""
-    # Wait for the MQTT client before subscribing.  This helper establishes
-    # readiness; it does not need to be treated as a boolean feature flag.
+    """Subscribe to configured Kiln 3 raw data and publish its legacy topics."""
     await mqtt.async_wait_for_mqtt_client(hass)
-
+    config = manager["data"].get("settings", {}).get("kiln_configs", {}).get("3", {})
+    raw_topic = str(config.get("raw_topic") or KILN_3_RAW_MQTT_TOPIC)
+    try:
+        heartbeat_timeout = max(1, min(3600, int(config.get("heartbeat_timeout_seconds", 5))))
+    except (TypeError, ValueError):
+        heartbeat_timeout = 5
     state = manager["kiln_monitor"] = {
-        "last_clock": None,
-        "last_clock_change": None,
-        "values": None,
-        "data_valid": False,
-        "raw": {},
-        "last_received": None,
-        "last_clock_received": None,
-        "last_status": "Unknown",
-        "last_published_connected": None,
+        "last_clock": None, "last_clock_change": None, "values": None,
+        "data_valid": False, "raw": {}, "last_received": None,
+        "last_clock_received": None, "last_status": "Unknown",
+        "last_published_connected": None, "topic": raw_topic,
+        "heartbeat_timeout_seconds": heartbeat_timeout, "tags": _tags(config),
     }
 
-    async def publish(topic: str, payload, *, retain: bool = False) -> None:
-        await mqtt.async_publish(hass, topic, payload, qos=0, retain=retain)
+    async def publish(topic: str, payload) -> None:
+        await mqtt.async_publish(hass, topic, payload, qos=0, retain=False)
 
     async def publish_unknown(communication_ok: bool) -> None:
-        data = {
-            "status": "Unknown",
-            "dataFresh": False,
-            "communicationOK": communication_ok,
-        }
-        await publish(KILN_3_STATUS_MQTT_TOPIC, json.dumps(data))
+        await publish(KILN_3_STATUS_MQTT_TOPIC, json.dumps({
+            "status": "Unknown", "dataFresh": False, "communicationOK": communication_ok,
+        }))
         await publish(KILN_3_COMMUNICATION_MQTT_TOPIC, "OFF")
 
     async def publish_current() -> None:
         values = state["values"]
-        now = hass.loop.time()
-        fresh = (
-            state["last_clock_change"] is not None
-            and now - state["last_clock_change"] <= _HEARTBEAT_TIMEOUT
-        )
+        fresh = (state["last_clock_change"] is not None and
+                 hass.loop.time() - state["last_clock_change"] <= heartbeat_timeout)
         if not fresh or values is None or not state["data_valid"]:
             if state["last_published_connected"] is not False:
                 await publish_unknown(fresh)
                 state["last_published_connected"] = False
             return
-
         status, running, paused, stopped = _status(values)
         state["last_status"] = status
-        data = {
-            "status": status,
-            "dataFresh": True,
-            "communicationOK": True,
-            "running": running,
-            "paused": paused,
-            "stopped": stopped,
-            "normalStop": values["Normal_Stop"],
-            "kilnDown": values["Kiln_Down"],
-            "currentStep": values["Step_Number"],
-            "finalStep": values["Step_Stop"],
-            "onFinalStep": values["Step_Number"] == values["Step_Stop"] and values["Step_Stop"] > 0,
-            "pastFinalStep": values["Step_Number"] > values["Step_Stop"] and values["Step_Stop"] > 0,
-        }
-        await publish(KILN_3_STATUS_MQTT_TOPIC, json.dumps(data))
+        await publish(KILN_3_STATUS_MQTT_TOPIC, json.dumps({
+            "status": status, "dataFresh": True, "communicationOK": True,
+            "running": running, "paused": paused, "stopped": stopped,
+            "normalStop": values["normal_stop"], "kilnDown": values["kiln_down"],
+            "currentStep": values["step_number"], "finalStep": values["step_stop"],
+            "onFinalStep": values["step_number"] == values["step_stop"] and values["step_stop"] > 0,
+            "pastFinalStep": values["step_number"] > values["step_stop"] and values["step_stop"] > 0,
+        }))
         await publish(KILN_3_COMMUNICATION_MQTT_TOPIC, "ON")
-        await publish(KILN_3_CURRENT_STEP_MQTT_TOPIC, str(values["Step_Number"]))
-        await publish(KILN_3_FINAL_STEP_MQTT_TOPIC, str(values["Step_Stop"]))
-        await publish(KILN_3_NORMAL_STOP_MQTT_TOPIC, "ON" if values["Normal_Stop"] else "OFF")
-        await publish(KILN_3_DOWN_MQTT_TOPIC, "ON" if values["Kiln_Down"] else "OFF")
+        await publish(KILN_3_CURRENT_STEP_MQTT_TOPIC, str(values["step_number"]))
+        await publish(KILN_3_FINAL_STEP_MQTT_TOPIC, str(values["step_stop"]))
+        await publish(KILN_3_NORMAL_STOP_MQTT_TOPIC, "ON" if values["normal_stop"] else "OFF")
+        await publish(KILN_3_DOWN_MQTT_TOPIC, "ON" if values["kiln_down"] else "OFF")
         await publish(KILN_3_PAUSED_MQTT_TOPIC, "ON" if paused else "OFF")
         state["last_published_connected"] = True
 
@@ -151,30 +132,21 @@ async def async_setup_monitor(hass: HomeAssistant, entry, manager: dict) -> None
             return
         state["raw"] = raw
         state["last_received"] = dt_util.utcnow().isoformat()
-        incoming = _normalize(raw)
-        clock = incoming.get(_CLOCK)
+        incoming = _normalize(raw, config)
+        clock = incoming.get("clock")
         if type(clock) is int and clock != state["last_clock"]:
             state["last_clock"] = clock
             state["last_clock_change"] = hass.loop.time()
             state["last_clock_received"] = dt_util.utcnow().isoformat()
         values = _validated(incoming)
-        if values is not None:
-            state["values"] = values
-            state["data_valid"] = True
-        else:
-            state["data_valid"] = False
+        state["values"] = values if values is not None else state["values"]
+        state["data_valid"] = values is not None
         await publish_current()
 
     async def on_tick(_now) -> None:
         await publish_current()
 
-    unsubscribe = await mqtt.async_subscribe(
-            hass, KILN_3_RAW_MQTT_TOPIC, on_message, qos=0
-    )
+    unsubscribe = await mqtt.async_subscribe(hass, raw_topic, on_message, qos=0)
     entry.async_on_unload(unsubscribe)
-    entry.async_on_unload(
-        async_track_time_interval(
-            hass, on_tick, timedelta(seconds=1)
-        )
-    )
+    entry.async_on_unload(async_track_time_interval(hass, on_tick, timedelta(seconds=1)))
     await publish_current()

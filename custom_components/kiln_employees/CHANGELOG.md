@@ -1,5 +1,12 @@
 # Kiln Employee Manager changelog
 
+## 1.19.0
+
+- Made Kiln 3 MQTT and PLC tag mappings configurable from the Kiln 3 page.
+- Added a friendly PLC/MQTT setup section, including the five-second clock timeout.
+- Added prepared, disabled configuration defaults for Kilns 1 and 2.
+- Saving Kiln 3 setup reloads the integration automatically so changes take effect without restarting Home Assistant.
+
 ## 1.18.0
 
 - Removed the Kiln 3 signal matrix and restored the previous simpler Kiln 3

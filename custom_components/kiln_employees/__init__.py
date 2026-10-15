@@ -5,6 +5,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.components import frontend, panel_custom
 from homeassistant.components.http import StaticPathConfig
 from pathlib import Path
+from copy import deepcopy
 
 from . import panel_api
 from .const import (
@@ -16,6 +17,7 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
     DEFAULT_ENTITIES,
+    DEFAULT_KILN_CONFIGS,
 )
 from .plc_alerts import async_setup_alerts
 from .completion import async_setup_completion
@@ -55,8 +57,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data["settings"].setdefault("plc_lost_delay_seconds", 30)
     data["settings"].setdefault("plc_restored_delay_seconds", 15)
     data["settings"].setdefault("kiln_paused_delay_seconds", 300)
-    data["settings"].setdefault("kiln_configs", {})
-    data["settings"]["kiln_configs"].setdefault("3", {"completion_rule": "stopped_idle"})
+    configs = data["settings"].setdefault("kiln_configs", {})
+    # Add new configuration fields without overwriting choices already saved
+    # by the user.  This makes upgrades additive and keeps Kiln 3's existing
+    # completion rule intact.
+    for kiln_id, defaults in DEFAULT_KILN_CONFIGS.items():
+        saved = configs.setdefault(kiln_id, {})
+        for key, value in defaults.items():
+            if key == "tags":
+                saved_tags = saved.setdefault("tags", {})
+                for tag_key, tag_value in value.items():
+                    saved_tags.setdefault(tag_key, tag_value)
+            else:
+                saved.setdefault(key, deepcopy(value))
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "store": store,

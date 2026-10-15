@@ -901,10 +901,30 @@ class KilnEmployeesPanel extends HTMLElement {
     config.append(this.el('div', { class: 'muted', text: `Data source: PLC data received through MQTT (${data.topic || 'Unknown'})` }));
     const kilnConfigs = this.settings.kiln_configs || {};
     const kilnThreeConfig = kilnConfigs['3'] || {};
+    const tags = kilnThreeConfig.tags || {};
     config.append(this.el('hr'));
     config.append(this.el('h3', { text: 'When should “Kiln complete” be sent?' }));
     config.append(this.el('p', { class: 'muted', text: 'The integration waits for the kiln to stop, then checks this rule before notifying employees.' }));
     const completionForm = this.el('form');
+    const sourceDetails = this.el('details', { class: 'card' });
+    sourceDetails.append(this.el('summary', { text: 'PLC and MQTT setup' }));
+    sourceDetails.append(this.el('p', { class: 'muted', text: 'These fields tell the integration where to find Kiln 3. You only need to change them if the MQTT topic or PLC tag names are different.' }));
+    const setupGrid = this.el('div', { class: 'grid' });
+    const rawTopic = this.field(setupGrid, 'Raw MQTT topic', 'raw_topic', 'text', kilnThreeConfig.raw_topic || 'plant/kiln3/raw');
+    const heartbeat = this.numberField(setupGrid, 'PLC clock timeout (seconds)', 'heartbeat_timeout_seconds', kilnThreeConfig.heartbeat_timeout_seconds || 5, 1, 3600, 'If the PLC clock does not change for this long, communication is marked unavailable.');
+    sourceDetails.append(setupGrid);
+    const tagGrid = this.el('div', { class: 'grid' });
+    const tagFields = {
+      on: this.field(tagGrid, 'Running signal tag', 'tag_on', 'text', tags.on || 'Kiln1_ON'),
+      pause: this.field(tagGrid, 'Paused signal tag', 'tag_pause', 'text', tags.pause || 'Kiln1_Pause'),
+      clock: this.field(tagGrid, 'PLC clock tag', 'tag_clock', 'text', tags.clock || 'PLC_ClockValues[5]'),
+      normal_stop: this.field(tagGrid, 'Normal Stop tag', 'tag_normal_stop', 'text', tags.normal_stop || 'Program:Kiln1.Normal_Stop'),
+      kiln_down: this.field(tagGrid, 'Kiln Down tag', 'tag_kiln_down', 'text', tags.kiln_down || 'Program:Kiln1.Kiln_Down'),
+      step_number: this.field(tagGrid, 'Current step tag', 'tag_step_number', 'text', tags.step_number || 'Program:Kiln1.Step_Number'),
+      step_stop: this.field(tagGrid, 'Final step tag', 'tag_step_stop', 'text', tags.step_stop || 'Program:Kiln1.Step_Stop'),
+    };
+    sourceDetails.append(this.el('h4', { text: 'PLC signal names' }), tagGrid);
+    completionForm.append(sourceDetails);
     const completionRule = this.field(completionForm, 'Send the completion notification when', 'completion_rule', 'select', kilnThreeConfig.completion_rule || 'stopped_idle', [
       ['stopped_idle', 'The kiln stops (current default)'],
       ['normal_stop_or_down', 'Normal Stop or Kiln Down is reported'],
@@ -933,7 +953,12 @@ class KilnEmployeesPanel extends HTMLElement {
       this.busy = true;
       saveRule.disabled = true;
       try {
-        await this.call('save_kiln_config', { kiln_id: '3', completion_rule: completionRule.value });
+        await this.call('save_kiln_config', {
+          kiln_id: '3', completion_rule: completionRule.value,
+          raw_topic: rawTopic.value,
+          heartbeat_timeout_seconds: Number(heartbeat.value),
+          tags: Object.fromEntries(Object.entries(tagFields).map(([key, input]) => [key, input.value])),
+        });
         this.notice = 'Kiln 3 completion rule saved.';
         await this.load();
       } catch (error) {

@@ -25,16 +25,16 @@ def _matches_completion_rule(manager: dict, kiln_id: str, rule: str) -> bool:
     if not isinstance(values, dict):
         return False
     if rule == "normal_stop_or_down":
-        return values.get("Normal_Stop") is True or values.get("Kiln_Down") is True
+        return values.get("normal_stop") is True or values.get("kiln_down") is True
     if rule == "normal_stop":
-        return values.get("Normal_Stop") is True
+        return values.get("normal_stop") is True
     if rule == "kiln_down":
-        return values.get("Kiln_Down") is True
+        return values.get("kiln_down") is True
     if rule == "final_step":
-        return (isinstance(values.get("Step_Number"), int)
-                and isinstance(values.get("Step_Stop"), int)
-                and values["Step_Stop"] > 0
-                and values["Step_Number"] >= values["Step_Stop"])
+        return (isinstance(values.get("step_number"), int)
+                and isinstance(values.get("step_stop"), int)
+                and values["step_stop"] > 0
+                and values["step_number"] >= values["step_stop"])
     return False
 
 

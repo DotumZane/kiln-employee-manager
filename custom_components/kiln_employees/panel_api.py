@@ -89,8 +89,9 @@ def _plc_data(manager: dict) -> dict:
     """Return read-only raw PLC diagnostics for the admin panel."""
     monitor = manager.get("kiln_monitor", {})
     raw = monitor.get("raw", {})
+    config = manager.get("data", {}).get("settings", {}).get("kiln_configs", {}).get("3", {})
     return {
-        "topic": KILN_3_RAW_MQTT_TOPIC,
+        "topic": monitor.get("topic") or config.get("raw_topic") or KILN_3_RAW_MQTT_TOPIC,
         "raw": raw if isinstance(raw, dict) else {},
         "last_received": monitor.get("last_received"),
         "last_clock_received": monitor.get("last_clock_received"),
@@ -423,6 +424,9 @@ async def ws_save_alert_settings(hass, connection, msg):
     vol.Required("type"): "kiln_employees/save_kiln_config",
     vol.Required("kiln_id"): str,
     vol.Required("completion_rule"): str,
+    vol.Optional("raw_topic"): str,
+    vol.Optional("heartbeat_timeout_seconds"): int,
+    vol.Optional("tags"): dict,
 })
 @websocket_api.require_admin
 @websocket_api.async_response
@@ -437,10 +441,30 @@ async def ws_save_kiln_config(hass, connection, msg):
     if kiln_id not in {"1", "2", "3"} or rule not in COMPLETION_RULES:
         connection.send_error(msg["id"], "invalid_kiln_config", "Invalid kiln or completion rule")
         return
+    raw_topic = msg.get("raw_topic")
+    timeout = msg.get("heartbeat_timeout_seconds")
+    tags = msg.get("tags")
+    if raw_topic is not None and (not raw_topic.strip() or len(raw_topic) > 255):
+        connection.send_error(msg["id"], "invalid_kiln_config", "MQTT topic is invalid")
+        return
+    if timeout is not None and not 1 <= timeout <= 3600:
+        connection.send_error(msg["id"], "invalid_kiln_config", "Heartbeat timeout must be 1-3600 seconds")
+        return
+    tag_keys = {"on", "pause", "clock", "normal_stop", "kiln_down", "step_number", "step_stop"}
+    if tags is not None and (set(tags) - tag_keys or any(not isinstance(v, str) or not v.strip() for v in tags.values())):
+        connection.send_error(msg["id"], "invalid_kiln_config", "Each PLC tag must be a non-empty name")
+        return
     settings = mgr["data"].setdefault("settings", {})
     configs = settings.setdefault("kiln_configs", {})
     previous = dict(configs.get(kiln_id, {}))
-    configs[kiln_id] = {**previous, "completion_rule": rule}
+    updated = {**previous, "completion_rule": rule}
+    if raw_topic is not None:
+        updated["raw_topic"] = raw_topic.strip()
+    if timeout is not None:
+        updated["heartbeat_timeout_seconds"] = timeout
+    if tags is not None:
+        updated["tags"] = {**previous.get("tags", {}), **{key: value.strip() for key, value in tags.items()}}
+    configs[kiln_id] = updated
     try:
         await mgr["store"].async_save(mgr["data"])
     except Exception:
@@ -448,7 +472,11 @@ async def ws_save_kiln_config(hass, connection, msg):
         raise
     for listener in tuple(mgr.get("listeners", ())):
         listener()
-    connection.send_result(msg["id"], {"saved": True})
+    await hass.config_entries.async_reload(next(
+        entry_id for entry_id, value in hass.data.get(DOMAIN, {}).items()
+        if value is mgr
+    ))
+    connection.send_result(msg["id"], {"saved": True, "reloaded": True})
 
 
 
