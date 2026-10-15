@@ -601,6 +601,7 @@ class KilnEmployeesPanel extends HTMLElement {
     const currentAdditional = () => this.additionalEntities.map(info => ({
       name: info.label,
       entity_id: info.entity_id,
+      kiln_id: info.kiln_id || 'shared',
     }));
     card.append(this.el('h3', { text: 'Active Integration Entities' }));
     for (const [key, info] of Object.entries(this.entities)) {
@@ -644,13 +645,21 @@ class KilnEmployeesPanel extends HTMLElement {
       if (this.additionalEditingIndex === index) {
         const name = this.el('input', { type: 'text', value: info.label });
         const entity = this.el('input', { type: 'text', value: info.entity_id });
+        const kiln = this.el('select');
+        [['shared', 'Shared'], ['1', 'Kiln 1'], ['2', 'Kiln 2'], ['3', 'Kiln 3']].forEach(([value, label]) => {
+          const option = this.el('option', { text: label });
+          option.value = value;
+          kiln.append(option);
+        });
+        kiln.value = info.kiln_id || 'shared';
         name.setAttribute('aria-label', 'Additional entity name');
         entity.setAttribute('aria-label', 'Additional entity ID');
+        kiln.setAttribute('aria-label', 'Assign entity to kiln');
         const save = this.el('button', { text: 'Save' });
         save.type = 'button';
         save.onclick = () => {
           const additional = currentAdditional();
-          additional[index] = { name: name.value.trim(), entity_id: entity.value.trim() };
+          additional[index] = { name: name.value.trim(), entity_id: entity.value.trim(), kiln_id: kiln.value };
           persist(currentEntities(), additional);
         };
         const cancel = this.el('button', { text: 'Cancel', class: 'secondary' });
@@ -660,7 +669,7 @@ class KilnEmployeesPanel extends HTMLElement {
           this.additionalEditingIndex = null;
           this.render();
         };
-        row.append(heading, name, entity);
+        row.append(heading, name, entity, kiln);
         actions.append(save, cancel);
       } else {
         const edit = this.el('button', { text: 'Edit', class: 'secondary' });
@@ -669,7 +678,7 @@ class KilnEmployeesPanel extends HTMLElement {
         const remove = this.el('button', { text: 'Remove', class: 'secondary' });
         remove.type = 'button';
         remove.onclick = () => persist(currentEntities(), currentAdditional().filter((_, itemIndex) => itemIndex !== index));
-        row.append(heading, this.el('div', { class: 'muted', text: info.entity_id }));
+        row.append(heading, this.el('div', { class: 'muted', text: `${info.entity_id} · ${info.kiln_id === 'shared' || !info.kiln_id ? 'Shared' : `Kiln ${info.kiln_id}`}` }));
         actions.append(edit, remove);
       }
       const status = info.exists ? `${info.state}${info.friendly_name ? ` · ${info.friendly_name}` : ''}` : 'Entity not found';

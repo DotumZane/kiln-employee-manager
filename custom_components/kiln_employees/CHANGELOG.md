@@ -1,5 +1,10 @@
 # Kiln Employee Manager changelog
 
+## 1.17.0
+
+- Additional Home Assistant entities can now be assigned to Shared, Kiln 1,
+  Kiln 2, or Kiln 3 when they are added or edited.
+
 ## 1.16.2
 
 - Renamed the save button to make clear it saves the completion rule and the

@@ -326,14 +326,16 @@ async def ws_save_entities(hass, connection, msg):
             return
         raw_name = item.get("name", "")
         raw_entity_id = item.get("entity_id", "")
+        kiln_id = item.get("kiln_id", "shared")
         name = raw_name.strip() if isinstance(raw_name, str) else ""
         entity_id = raw_entity_id.strip() if isinstance(raw_entity_id, str) else ""
-        if (not name or len(name) > 80
+        if (kiln_id not in {"shared", "1", "2", "3"}
+                or not name or len(name) > 80
                 or not ENTITY_ID_RE.fullmatch(entity_id) or entity_id in seen):
             connection.send_error(msg["id"], "invalid_entities", "Additional entities must have unique names and valid entity IDs")
             return
         seen.add(entity_id)
-        cleaned.append({"name": name, "entity_id": entity_id})
+        cleaned.append({"name": name, "entity_id": entity_id, "kiln_id": kiln_id})
     previous_entities = dict(mgr["data"].get("entities", {}))
     previous_additional = list(mgr["data"].get("additional_entities", []))
     mgr["data"]["entities"] = dict(entities)
